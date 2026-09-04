@@ -6,14 +6,8 @@
     <title>Mega Fire Roulette | Live</title>
     
     <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🔥</text></svg>">
-    
-    <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
-    
-    <!-- Supabase (INTOCABLE) -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    
-    <!-- GSAP: Animación Física (INTOCABLE) -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
 
     <style>
@@ -30,7 +24,6 @@
             font-family: ui-sans-serif, system-ui, -apple-system, sans-serif;
         }
 
-        /* --- MENSAJE FLOTANTE (TOAST) --- */
         #toast-msg {
             position: fixed; top: 15%; left: 50%; transform: translateX(-50%);
             background: rgba(220, 38, 38, 0.95); color: white; padding: 8px 16px;
@@ -39,47 +32,40 @@
             opacity: 0; pointer-events: none; transition: opacity 0.3s ease;
         }
 
-        /* --- CABECERA Y ESTABILIDAD --- */
         .jackpot-row { background: linear-gradient(180deg, #18181b 0%, #09090b 100%); border-bottom: 1px solid #27272a; height: 32px; }
         .j-grand { text-shadow: 0 0 10px #facc15; animation: slow-pulse 2s infinite; }
         @keyframes slow-pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.7; } }
         
-        /* Header fijo para evitar saltos */
         header { height: 48px; box-sizing: border-box; }
 
-        /* --- ZONA RULETA --- */
+        /* ZONA RULETA E HISTORIAL */
         #roulette-container {
             flex: none; display: flex; flex-direction: column; align-items: center; justify-content: center;
             background: radial-gradient(circle at center, #18181b 0%, #000 100%); border-bottom: 1px solid #27272a;
-            transition: height 0.5s cubic-bezier(0.4, 0, 0.2, 1); height: 80px; position: relative; overflow: hidden; z-index: 10;
+            transition: height 0.5s cubic-bezier(0.4, 0, 0.2, 1); height: 95px; position: relative; overflow: hidden; z-index: 10;
         }
-        .wheel-wrapper {
-            position: relative; width: 120px; height: 120px; transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1); margin-top: 10px;
-        }
-        .wheel-svg {
-            width: 100%; height: 100%; border-radius: 50%; border: 4px solid #27272a; box-shadow: 0 0 20px rgba(0,0,0,0.9); will-change: transform;
-        }
+        .wheel-wrapper { position: relative; width: 100px; height: 100px; transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1); margin-top: 5px; }
+        .wheel-svg { width: 100%; height: 100%; border-radius: 50%; border: 4px solid #27272a; box-shadow: 0 0 20px rgba(0,0,0,0.9); will-change: transform; }
         .wheel-pointer {
             position: absolute; top: -5px; left: 50%; transform: translateX(-50%); width: 0; height: 0;
             border-left: 8px solid transparent; border-right: 8px solid transparent; border-top: 20px solid #facc15;
             z-index: 30; filter: drop-shadow(0 4px 4px rgba(0,0,0,0.8)); transition: all 0.5s ease;
         }
-        .ball-orbit {
-            position: absolute; top: 0; left: 0; width: 100%; height: 100%; border-radius: 50%;
-            z-index: 20; will-change: transform; pointer-events: none; opacity: 0; transition: opacity 0.3s;
-        }
+        .ball-orbit { position: absolute; top: 0; left: 0; width: 100%; height: 100%; border-radius: 50%; z-index: 20; will-change: transform; pointer-events: none; opacity: 0; transition: opacity 0.3s; }
         .roulette-ball {
             position: absolute; top: 12px; left: 50%; transform: translateX(-50%); width: 8px; height: 8px;
-            background: radial-gradient(circle, #fff 0%, #d4d4d8 100%); border-radius: 50%;
-            box-shadow: 0 0 8px rgba(255,255,255,0.8), 0 3px 5px rgba(0,0,0,0.9); transition: all 0.5s ease;
+            background: radial-gradient(circle, #fff 0%, #d4d4d8 100%); border-radius: 50%; box-shadow: 0 0 8px rgba(255,255,255,0.8), 0 3px 5px rgba(0,0,0,0.9);
         }
 
-        /* --- ZONA TABLERO (MÓVIL FIRST) --- */
-        #board-zone { flex: 1; display: flex; flex-direction: column; min-height: 0; padding: 4px 8px; position: relative; touch-action: none; }
-        .board-grid {
-            flex: 1; display: grid; grid-template-columns: repeat(3, 1fr); grid-template-rows: repeat(13, minmax(0, 1fr));
-            gap: 2px; width: 100%; max-width: 450px; margin: 0 auto;
+        #results-history {
+            position: absolute; bottom: 4px; left: 0; width: 100%; text-align: center;
+            font-size: 0.7rem; font-weight: bold; color: #a1a1aa; letter-spacing: 0.1em;
+            transition: opacity 0.3s ease;
         }
+
+        /* TABLERO */
+        #board-zone { flex: 1; display: flex; flex-direction: column; min-height: 0; padding: 4px 8px; position: relative; touch-action: none; }
+        .board-grid { flex: 1; display: grid; grid-template-columns: repeat(3, 1fr); grid-template-rows: repeat(13, minmax(0, 1fr)); gap: 2px; width: 100%; max-width: 450px; margin: 0 auto; }
         .board-cell {
             position: relative; display: flex; align-items: center; justify-content: center;
             font-size: clamp(0.9rem, 2vh, 1.3rem); font-weight: 800; border-radius: 4px;
@@ -89,13 +75,9 @@
         .cell-red { background: var(--red-num); }
         .cell-black { background: var(--black-num); }
         .cell-green { background: var(--green-num); grid-column: 1 / span 3; grid-row: 1; }
+        .color-bets-row { display: flex; gap: 4px; width: 100%; max-width: 450px; margin: 4px auto 0 auto; height: 40px; flex-shrink: 0; }
 
-        /* Fila Roja y Negra Integrada */
-        .color-bets-row {
-            display: flex; gap: 4px; width: 100%; max-width: 450px; margin: 4px auto 0 auto; height: 40px; flex-shrink: 0;
-        }
-
-        /* ZONAS SPLIT */
+        /* SPLITS */
         .split-zone { position: absolute; z-index: 15; background: transparent; }
         .split-h { right: -12px; top: 15%; height: 70%; width: 24px; }
         .split-v { bottom: -12px; left: 15%; width: 70%; height: 24px; }
@@ -103,7 +85,7 @@
         .split-0-2 { bottom: -12px; left: 50%; transform: translateX(-50%); width: 22%; height: 24px; }
         .split-0-3 { bottom: -12px; right: 16%; width: 22%; height: 24px; }
 
-        /* ESTADOS CELDAS Y FICHAS */
+        /* FICHAS Y ESTADOS */
         .cell-selected { border: 2px solid #3b82f6; box-shadow: 0 0 10px rgba(59,130,246,0.8), inset 0 0 5px rgba(0,0,0,0.5); z-index: 5; }
         .chip-visual {
             position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
@@ -126,7 +108,7 @@
             100% { box-shadow: 0 0 15px var(--fire-glow), inset 0 0 10px var(--fire-core); border-color: var(--fire-core); }
         }
 
-        /* --- MEGA FIRE BONUS --- */
+        /* MEGA FIRE BONUS */
         #bonus-zone {
             position: absolute; inset: 0; background: radial-gradient(circle at center, rgba(69,10,10,0.98) 0%, rgba(0,0,0,0.98) 100%);
             z-index: 100; display: none; flex-direction: column; justify-content: center; padding: 1rem;
@@ -144,27 +126,28 @@
         }
         @keyframes cell-reveal { 0% { transform: scale(0.5); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
 
-        /* --- CONTROLES INFERIORES Y BOTONES FIJOS --- */
+        /* CONTROLES INFERIORES */
         #controls-zone {
             flex: none; background: #09090b; border-top: 1px solid #27272a; padding: 6px 10px calc(var(--safe-bottom) + 6px) 10px;
             z-index: 20; box-shadow: 0 -10px 20px rgba(0,0,0,0.8); height: 95px; box-sizing: border-box;
         }
-        
         .btn-active-chip { border-color: #3b82f6 !important; background-color: #1e3a8a !important; color: white !important; }
         .btn-active-erase { border-color: #ef4444 !important; background-color: #7f1d1d !important; color: white !important; }
 
-        .spin-btn-style {
-            background: #27272a; border-color: #3f3f46; color: #71717a; transition: all 0.2s;
-        }
-        .spin-btn-active {
-            background: linear-gradient(to bottom, #16a34a, #15803d); border-color: #4ade80; color: white;
-            box-shadow: 0 3px 0 #14532d;
-        }
+        .spin-btn-style { background: #27272a; border-color: #3f3f46; color: #71717a; transition: all 0.2s; }
+        .spin-btn-active { background: linear-gradient(to bottom, #16a34a, #15803d); border-color: #4ade80; color: white; box-shadow: 0 3px 0 #14532d; }
         .spin-btn-active:active { transform: translateY(3px); box-shadow: 0 0px 0 #14532d; }
+        #btn-spin-mobile, #btn-spin-desktop { touch-action: manipulation; box-sizing: border-box; border-width: 1px; border-style: solid; }
 
-        /* ESTABILIDAD BOTONES GIRAR */
-        #btn-spin-mobile, #btn-spin-desktop {
-            touch-action: manipulation; box-sizing: border-box; border-width: 1px; border-style: solid;
+        /* MEDIA QUERIES PANTALLAS PEQUEÑAS */
+        @media (max-height: 750px) {
+            .jackpot-row { padding-top: 2px; padding-bottom: 2px; }
+            header { padding-top: 4px; padding-bottom: 4px; }
+            #roulette-container { height: 85px; }
+            .wheel-wrapper { width: 100px; height: 100px; margin-top: 5px; }
+            #controls-zone { padding-top: 6px; padding-bottom: calc(var(--safe-bottom) + 4px); }
+            .chip-btn { padding-top: 6px; padding-bottom: 6px; }
+            .board-cell { font-size: 1.1rem; }
         }
     </style>
 </head>
@@ -172,7 +155,6 @@
 
     <div id="toast-msg">Saldo Insuficiente</div>
 
-    <!-- PANTALLAS DE CARGA -->
     <div id="sys-loading" class="absolute inset-0 z-[200] bg-black flex flex-col items-center justify-center">
         <div class="text-5xl mb-4">🔥</div>
         <p class="text-orange-500 font-bold uppercase tracking-widest text-sm animate-pulse">Conectando Mesa...</p>
@@ -181,7 +163,6 @@
         <h1 class="text-red-600 text-3xl font-black uppercase">Acceso Denegado</h1>
     </div>
 
-    <!-- CABECERA Y JACKPOTS (Fijos, misma altura siempre) -->
     <div class="jackpot-row flex justify-between px-2 w-full">
         <div class="text-center w-1/4 flex flex-col justify-center"><div class="text-[8px] text-green-400 font-bold uppercase leading-none">Mini</div><div class="text-xs font-black leading-none mt-0.5">x2</div></div>
         <div class="text-center w-1/4 flex flex-col justify-center border-l border-zinc-800"><div class="text-[8px] text-blue-400 font-bold uppercase leading-none">Minor</div><div class="text-xs font-black leading-none mt-0.5">x5</div></div>
@@ -195,7 +176,6 @@
             <span id="player-name" class="text-xs font-bold text-zinc-200 truncate w-full leading-none">...</span>
         </div>
         
-        <!-- BOTÓN GIRAR MÓVIL (Misma Función de siempre, fijo sin saltos) -->
         <div class="w-1/3 flex justify-center md:hidden px-1 h-full items-center">
             <button id="btn-spin-mobile" onclick="executeRound()" class="flex items-center justify-center rounded font-black uppercase tracking-widest w-full h-8 text-[11px] spin-btn-style" disabled>
                 GIRAR
@@ -208,11 +188,11 @@
         </div>
     </header>
 
-    <!-- ZONA RULETA FÍSICA -->
     <div id="roulette-container">
         <div id="phase-text" class="absolute top-1 text-[9px] font-black uppercase tracking-[0.2em] text-blue-400 z-40 bg-black/60 px-2 py-1 rounded-full border border-blue-500/30">
             APUESTAS ABIERTAS
         </div>
+        
         <div id="wheel-wrapper" class="wheel-wrapper">
             <div class="wheel-pointer" id="wheel-pointer"></div>
             <div id="wheel-svg" class="wheel-svg"></div>
@@ -221,20 +201,19 @@
             </div>
             <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[30%] h-[30%] bg-zinc-900 border border-zinc-700 rounded-full z-20 box-shadow-[inset_0_0_10px_black]"></div>
         </div>
+
+        <!-- Tira de Historial -->
+        <div id="results-history"></div>
     </div>
 
-    <!-- ZONA TABLERO COMPLETO (Y COLORES ROJO/NEGRO) -->
     <div id="board-zone">
-        <div id="board-container" class="board-grid">
-            <!-- Construido por JS -->
-        </div>
+        <div id="board-container" class="board-grid"></div>
         <div class="color-bets-row">
             <div class="board-cell cell-red flex-1" data-num="RED" id="cell-RED">ROJO</div>
             <div class="board-cell cell-black flex-1" data-num="BLACK" id="cell-BLACK">NEGRO</div>
         </div>
     </div>
 
-    <!-- CONTROLES INFERIORES FIJOS (Sin saltos de tamaño) -->
     <div id="controls-zone">
         <div class="flex justify-between gap-1 mb-2 h-7">
             <button onclick="setMode('bet', 100)" class="chip-btn btn-active-chip bg-zinc-800 border border-zinc-600 rounded flex-1 text-zinc-200 font-bold text-xs">100</button>
@@ -250,18 +229,18 @@
                 <button onclick="clearBets()" class="bg-zinc-800 text-zinc-300 px-3 py-1.5 rounded text-[10px] font-bold uppercase border border-zinc-700 active:bg-zinc-700 h-full flex items-center">Limpiar</button>
             </div>
             <div class="flex flex-col justify-center items-end h-full">
-                <span class="text-[9px] text-zinc-500 uppercase font-bold leading-none mb-0.5">Apuesta Total</span>
+                <!-- Información Tirada Anterior o Total actual -->
+                <span id="prev-bet-label" class="text-[9px] text-zinc-500 uppercase font-bold leading-none mb-0.5">Apuesta Total</span>
                 <span id="total-bet-display" class="text-lg font-black text-white leading-none">0 <span class="text-[9px] text-zinc-400">bits</span></span>
             </div>
         </div>
         
-        <!-- BOTÓN GIRAR ESCRITORIO (Visible md, oculto móvil, MISMA FUNCIÓN) -->
         <button id="btn-spin-desktop" onclick="executeRound()" class="hidden md:flex w-full h-12 rounded font-black uppercase tracking-widest spin-btn-style items-center justify-center relative z-50 mt-2" disabled>
             GIRAR
         </button>
     </div>
 
-    <!-- MEGA FIRE BONUS (Intocado) -->
+    <!-- MEGA FIRE BONUS -->
     <div id="bonus-zone">
         <div class="text-center mb-4">
             <h2 class="text-4xl font-black text-transparent bg-clip-text bg-gradient-to-r from-yellow-400 to-red-500 uppercase drop-shadow-[0_0_10px_rgba(239,68,68,0.8)] leading-none">
@@ -284,7 +263,7 @@
         <div class="bonus-grid" id="bonus-grid"></div>
 
         <div class="text-center mt-6">
-            <span class="text-[10px] text-yellow-500 uppercase font-bold tracking-widest block mb-1">Premio Actual</span>
+            <span class="text-[10px] text-yellow-500 uppercase font-bold tracking-widest block mb-1">Premio Acumulado</span>
             <span id="bonus-current-win" class="text-2xl font-black text-green-400">0 bits</span>
         </div>
 
@@ -302,27 +281,24 @@
          LÓGICA JAVASCRIPT
          ========================================== -->
     <script>
-        /* --- SUPABASE (INTOCABLE) --- */
         const { createClient } = supabase;
         const supabaseUrl = 'https://qutkwzjchchhbqfhtaxi.supabase.co';
         const supabaseKey = 'sb_publishable_fv4VSDx-LJrkorzY0bOKaA_0poFJcU1';
         const supabaseClient = createClient(supabaseUrl, supabaseKey);
 
         let currentUser = null;
-        
-        /* --- ESTADOS Y CONSTANTES --- */
         let gameState = 'BETTING'; 
-        let inputMode = 'bet'; // 'bet' o 'erase'
+        let inputMode = 'bet'; 
         let currentChip = 100;
         let activeBets = {}; 
         let betHistory = []; 
         let finalPrizeAmount = 0;
+        let resultsHistory = []; // Historial de números
 
         const ROULETTE_NUMS = [0,32,15,19,4,21,2,25,17,34,6,27,13,36,11,30,8,23,10,5,24,16,33,1,20,14,31,9,22,18,29,7,28,12,35,3,26];
         const RED_NUMS = [1,3,5,7,9,12,14,16,18,19,21,23,25,27,30,32,34,36];
         const SEGMENT_DEG = 360 / 37;
 
-        /* --- TOAST MENSAJE --- */
         function showToast(msg) {
             const toast = document.getElementById('toast-msg');
             toast.innerText = msg;
@@ -330,7 +306,6 @@
             setTimeout(() => toast.style.opacity = '0', 2000);
         }
 
-        /* --- INICIALIZACIÓN --- */
         document.addEventListener('DOMContentLoaded', async () => {
             buildBoard();
             buildSvgWheel();
@@ -356,7 +331,6 @@
             document.getElementById('player-balance').innerHTML = `${parseFloat(currentUser.saldo).toLocaleString('es-ES')} <span class="text-[10px] text-zinc-400">bits</span>`;
         }
 
-        /* --- CONSTRUCCIÓN DEL TABLERO --- */
         function buildBoard() {
             const container = document.getElementById('board-container');
             container.innerHTML = '';
@@ -388,7 +362,6 @@
             }
         }
 
-        /* --- EVENTOS TÁCTILES NATURALES --- */
         let isPainting = false;
         let paintedInStroke = new Set();
 
@@ -418,13 +391,11 @@
             
             if (targetKey && !paintedInStroke.has(targetKey)) {
                 paintedInStroke.add(targetKey);
-                
                 if (inputMode === 'bet') placeBet(targetKey);
                 else if (inputMode === 'erase') eraseBet(targetKey);
             }
         }
 
-        /* --- GESTIÓN DE APUESTAS & ESTADOS FIJOS --- */
         function setMode(mode, val = null) {
             if(gameState !== 'BETTING') return;
             inputMode = mode;
@@ -432,12 +403,8 @@
             
             document.querySelectorAll('.chip-btn').forEach(btn => {
                 btn.classList.remove('btn-active-chip', 'btn-active-erase');
-                if (mode === 'bet' && parseInt(btn.innerText.replace('1K','1000')) === val) {
-                    btn.classList.add('btn-active-chip');
-                }
-                if (mode === 'erase' && btn.innerText === '🗑️') {
-                    btn.classList.add('btn-active-erase');
-                }
+                if (mode === 'bet' && parseInt(btn.innerText.replace('1K','1000')) === val) btn.classList.add('btn-active-chip');
+                if (mode === 'erase' && btn.innerText === '🗑️') btn.classList.add('btn-active-erase');
             });
         }
 
@@ -452,7 +419,6 @@
 
             activeBets[key] = (activeBets[key] || 0) + currentChip;
             betHistory.push({ type: 'add', key: key, amount: currentChip });
-            
             if(navigator.vibrate) navigator.vibrate(10);
             updateBoardUI();
         }
@@ -469,7 +435,6 @@
         function undoBet() {
             if(gameState !== 'BETTING' || betHistory.length === 0) return;
             const action = betHistory.pop();
-            
             if (action.type === 'add') {
                 activeBets[action.key] -= action.amount;
                 if (activeBets[action.key] <= 0) delete activeBets[action.key];
@@ -489,16 +454,11 @@
             ['btn-spin-mobile', 'btn-spin-desktop'].forEach(id => {
                 const btn = document.getElementById(id);
                 if(!btn) return;
-                
                 btn.disabled = !enabled;
                 btn.innerText = isProcessing ? 'PROCESANDO' : 'GIRAR';
                 btn.classList.remove('spin-btn-active', 'spin-btn-style');
-                
-                if (enabled) {
-                    btn.classList.add('spin-btn-active');
-                } else {
-                    btn.classList.add('spin-btn-style');
-                }
+                if (enabled) btn.classList.add('spin-btn-active');
+                else btn.classList.add('spin-btn-style');
             });
         }
 
@@ -513,57 +473,51 @@
                 
                 if (key === 'RED' || key === 'BLACK') {
                     const cell = document.getElementById(`cell-${key}`);
-                    if(cell) {
-                        cell.classList.add('cell-selected');
-                        cell.innerHTML += `<div class="chip-visual">${txt}</div>`;
-                    }
+                    if(cell) { cell.classList.add('cell-selected'); cell.innerHTML += `<div class="chip-visual">${txt}</div>`; }
                 } else if (key.includes('|')) {
                     const splitEl = document.querySelector(`.split-zone[data-num="${key}"]`);
                     if(splitEl) splitEl.innerHTML = `<div class="chip-visual">${txt}</div>`;
                 } else {
                     const cell = document.getElementById(`cell-${key}`);
-                    if (cell) {
-                        cell.classList.add('cell-selected');
-                        cell.innerHTML += `<div class="chip-visual">${txt}</div>`;
-                    }
+                    if (cell) { cell.classList.add('cell-selected'); cell.innerHTML += `<div class="chip-visual">${txt}</div>`; }
                 }
             }
 
+            document.getElementById('prev-bet-label').innerText = 'Apuesta Total';
             document.getElementById('total-bet-display').innerHTML = `${total.toLocaleString()} <span class="text-[9px] text-zinc-400">bits</span>`;
             
             if (total > 0) syncSpinButtons(true, false);
             else syncSpinButtons(false, false);
         }
 
-        // Traduce colores y splits a números puros para la lógica del backend
         function getCoveredNumbers() {
             let covered = new Set();
             for (let key of Object.keys(activeBets)) {
-                if (key === 'RED') {
-                    RED_NUMS.forEach(n => covered.add(n));
-                } else if (key === 'BLACK') {
-                    for(let i=1; i<=36; i++) { if(!RED_NUMS.includes(i)) covered.add(i); }
-                } else {
-                    key.toString().split('|').forEach(n => covered.add(parseInt(n)));
-                }
+                if (key === 'RED') { RED_NUMS.forEach(n => covered.add(n)); }
+                else if (key === 'BLACK') { for(let i=1; i<=36; i++) { if(!RED_NUMS.includes(i)) covered.add(i); } } 
+                else { key.toString().split('|').forEach(n => covered.add(parseInt(n))); }
             }
             return Array.from(covered);
         }
 
-        /* --- LÓGICA MATEMÁTICA (INTOCABLE) --- */
-        function getResultadoTirada(tiradas) {
+        /* --- NUEVO EQUILIBRIO MATEMÁTICO (CUMPLIENDO REQUISITOS) --- */
+        function getResultadoTirada(usuario) {
             const rand = Math.random();
+            const isBono = usuario.tiradas_objetivo >= 500;
             let mult = 0; let tipo = '';
-            if (tiradas <= 50) {
-                if (rand < 0.20) { mult = 0; tipo = 'loss'; }
-                else if (rand < 0.50) { mult = 0.3; tipo = 'false-win'; }
-                else if (rand < 0.90) { mult = 1.2; tipo = 'win-normal'; }
-                else { mult = 5; tipo = 'win-mega'; }
-            } else {
-                if (rand < 0.50) { mult = 0; tipo = 'loss'; }
-                else if (rand < 0.90) { mult = 0.3; tipo = 'false-win'; }
-                else if (rand < 0.98) { mult = 1.2; tipo = 'win-normal'; }
-                else { mult = 5; tipo = 'win-mega'; }
+
+            if (!isBono) { 
+                // SIN BONO (RTP 55%) -> Menos varianza inicial, aguanta las 150 tiradas.
+                if (rand < 0.55) { mult = 0; tipo = 'loss'; }
+                else if (rand < 0.80) { mult = 0.3; tipo = 'false-win'; } // 25%
+                else if (rand < 0.95) { mult = 1.2; tipo = 'win-normal'; } // 15%
+                else { mult = 5; tipo = 'win-mega'; } // 5%
+            } else { 
+                // CON BONO (RTP 63.6%) -> Supervivencia suave para 500 tiradas.
+                if (rand < 0.42) { mult = 0; tipo = 'loss'; }
+                else if (rand < 0.74) { mult = 0.3; tipo = 'false-win'; } // 32%
+                else if (rand < 0.94) { mult = 1.2; tipo = 'win-normal'; } // 20%
+                else { mult = 5; tipo = 'win-mega'; } // 6%
             }
             return { mult, tipo };
         }
@@ -573,38 +527,31 @@
             const container = document.getElementById('wheel-svg');
             let svg = `<svg viewBox="0 0 100 100" width="100%" height="100%">`;
             svg += `<circle cx="50" cy="50" r="48" fill="#18181b" />`; 
-            
-            const angle = 360 / 37;
-            const rad = Math.PI / 180;
+            const angle = 360 / 37; const rad = Math.PI / 180;
             
             ROULETTE_NUMS.forEach((num, i) => {
-                let startAngle = (i * angle) - (angle/2);
-                let endAngle = ((i + 1) * angle) - (angle/2);
-                let x1 = 50 + 40 * Math.sin(startAngle * rad);
-                let y1 = 50 - 40 * Math.cos(startAngle * rad);
-                let x2 = 50 + 40 * Math.sin(endAngle * rad);
-                let y2 = 50 - 40 * Math.cos(endAngle * rad);
-                
+                let startAngle = (i * angle) - (angle/2); let endAngle = ((i + 1) * angle) - (angle/2);
+                let x1 = 50 + 40 * Math.sin(startAngle * rad); let y1 = 50 - 40 * Math.cos(startAngle * rad);
+                let x2 = 50 + 40 * Math.sin(endAngle * rad); let y2 = 50 - 40 * Math.cos(endAngle * rad);
                 let color = (num === 0) ? '#16a34a' : (i % 2 === 0 ? '#171717' : '#dc2626');
                 svg += `<path d="M50,50 L${x1},${y1} A40,40 0 0,1 ${x2},${y2} Z" fill="${color}" stroke="#000" stroke-width="0.3"/>`;
-                
-                let textAngle = i * angle;
-                let tx = 50 + 33 * Math.sin(textAngle * rad);
-                let ty = 50 - 33 * Math.cos(textAngle * rad);
+                let textAngle = i * angle; let tx = 50 + 33 * Math.sin(textAngle * rad); let ty = 50 - 33 * Math.cos(textAngle * rad);
                 svg += `<text x="${tx}" y="${ty}" fill="#fff" font-size="4" font-weight="bold" text-anchor="middle" dominant-baseline="middle" transform="rotate(${textAngle}, ${tx}, ${ty})">${num}</text>`;
             });
             svg += `</svg>`;
             container.innerHTML = svg;
         }
 
-        /* --- FASE CIERRE DE APUESTAS Y ANIMACIÓN FÍSICA --- */
+        /* --- EJECUTAR RONDA --- */
         let currentWheelRot = 0;
         let currentBallRot = 0;
+        let lastTotalBet = 0; // Para el botón Tirada Anterior / Historial
 
         async function executeRound() {
             const totalBet = Object.values(activeBets).reduce((a, b) => a + b, 0);
             if (totalBet <= 0 || gameState !== 'BETTING') return;
-
+            
+            lastTotalBet = totalBet;
             gameState = 'CLOSED';
             const phaseText = document.getElementById('phase-text');
             phaseText.innerText = 'APUESTAS CERRADAS';
@@ -612,13 +559,14 @@
             
             syncSpinButtons(false, true);
             document.getElementById('board-zone').classList.add('board-dimmed');
+            document.getElementById('results-history').style.opacity = '0';
 
             // BACKEND LOGIC
             currentUser.saldo -= totalBet;
             currentUser.tiradas_realizadas += 1;
             updateBalanceUI();
 
-            const { mult, tipo } = getResultadoTirada(currentUser.tiradas_realizadas);
+            const { mult, tipo } = getResultadoTirada(currentUser);
             
             let resultNumber = null;
             const userNumbers = getCoveredNumbers();
@@ -627,27 +575,30 @@
                 resultNumber = userNumbers[Math.floor(Math.random() * userNumbers.length)];
             } else {
                 const availableLosses = ROULETTE_NUMS.filter(n => !userNumbers.includes(n));
-                // Si el jugador cubrió toda la mesa, el sistema forza el 0.
                 resultNumber = availableLosses.length > 0 ? availableLosses[Math.floor(Math.random() * availableLosses.length)] : 0;
             }
 
-            let fireNumbers = [resultNumber];
+            // CORRECCIÓN FIRE NUMBERS: Solo si es Mega Win garantizamos que el Fire caiga ahí.
+            let isMegaFire = (tipo === 'win-mega');
+            let fireNumbers = [];
+            if (isMegaFire) fireNumbers.push(resultNumber);
+            
             while(fireNumbers.length < 5) {
                 let r = Math.floor(Math.random() * 37);
-                if(!fireNumbers.includes(r)) fireNumbers.push(r);
+                if(!fireNumbers.includes(r) && r !== resultNumber) fireNumbers.push(r);
             }
 
             phaseText.innerText = '🔥 FIRE NUMBERS 🔥';
             phaseText.classList.replace('text-red-500', 'text-orange-500');
             phaseText.classList.replace('border-red-500/50', 'border-orange-500/50');
-            await new Promise(r => setTimeout(r, 400));
+            await new Promise(r => setTimeout(r, 300));
             
             for (let num of fireNumbers) {
                 document.getElementById(`cell-${num}`).classList.add('cell-fire');
                 if (navigator.vibrate) navigator.vibrate(20);
-                await new Promise(r => setTimeout(r, 200));
+                await new Promise(r => setTimeout(r, 100));
             }
-            await new Promise(r => setTimeout(r, 600));
+            await new Promise(r => setTimeout(r, 400));
 
             phaseText.innerText = 'GIRANDO...';
             phaseText.classList.add('animate-pulse');
@@ -660,7 +611,7 @@
             
             document.getElementById('ball-orbit').style.opacity = '1';
 
-            // GSAP ANIMATION (Intocable, conectada al resultado backend)
+            // GSAP ANIMATION
             const targetIndex = ROULETTE_NUMS.indexOf(resultNumber);
             const targetAngleWheel = 360 - (targetIndex * SEGMENT_DEG); 
             const wheelSpinAmount = (360 * 6) + targetAngleWheel - (currentWheelRot % 360);
@@ -669,36 +620,39 @@
             const ballSpinAmount = (-360 * 10) - (currentBallRot % 360);
             currentBallRot += ballSpinAmount;
 
-            gsap.to("#wheel-svg", {
-                rotation: currentWheelRot,
-                duration: 6,
-                ease: "power2.inOut",
-                transformOrigin: "50% 50%"
-            });
-
-            gsap.to("#ball-orbit", {
-                rotation: currentBallRot,
-                duration: 6,
-                ease: "power2.inOut",
-                transformOrigin: "50% 50%"
-            });
+            gsap.to("#wheel-svg", { rotation: currentWheelRot, duration: 6, ease: "power2.inOut", transformOrigin: "50% 50%" });
+            gsap.to("#ball-orbit", { rotation: currentBallRot, duration: 6, ease: "power2.inOut", transformOrigin: "50% 50%" });
 
             await new Promise(r => setTimeout(r, 6200));
 
+            // DETENCIÓN Y RESULTADO
             document.getElementById('ball-orbit').style.opacity = '0';
             document.getElementById(`cell-${resultNumber}`).classList.add('cell-winner');
             if (navigator.vibrate) navigator.vibrate([100, 50, 100]);
 
-            if (mult > 0) {
+            // Actualizar Historial
+            resultsHistory.unshift(resultNumber);
+            if(resultsHistory.length > 8) resultsHistory.pop();
+            document.getElementById('results-history').innerText = resultsHistory.join(' · ');
+
+            if (isMegaFire) {
+                // MEGA FIRE BONUS
                 phaseText.innerText = `🔥 RESULTADO: ${resultNumber} 🔥`;
                 phaseText.className = 'absolute top-1 text-[14px] font-black uppercase tracking-[0.2em] text-red-500 z-40 bg-zinc-900/90 px-4 py-2 rounded-full border border-red-500 shadow-[0_0_15px_rgba(239,68,68,0.8)]';
                 await new Promise(r => setTimeout(r, 2000));
                 startBonusGame(totalBet, mult, tipo);
+            } else if (mult > 0) {
+                // WIN NORMAL (Sobre la mesa, sin interrumpir con la grid 3x3)
+                finalPrizeAmount = totalBet * mult;
+                phaseText.innerText = `RESULTADO: ${resultNumber} | PREMIO: ${finalPrizeAmount} bits`;
+                phaseText.className = 'absolute top-1 text-[11px] font-black uppercase tracking-[0.1em] text-green-400 z-40 bg-zinc-900/90 px-4 py-2 rounded-full border border-green-500 shadow-[0_0_15px_rgba(34,197,94,0.8)]';
+                await new Promise(r => setTimeout(r, 3000));
+                resetRound();
             } else {
+                // LOSS
                 phaseText.innerText = `RESULTADO: ${resultNumber}`;
                 phaseText.className = 'absolute top-1 text-[11px] font-black uppercase tracking-[0.2em] text-white z-40 bg-zinc-900/90 px-4 py-2 rounded-full border border-white/50';
                 await new Promise(r => setTimeout(r, 2500));
-                
                 finalPrizeAmount = 0;
                 resetRound();
             }
@@ -717,10 +671,7 @@
             grid.innerHTML = '';
             for(let i=0; i<9; i++) grid.innerHTML += `<div class="bonus-cell" id="bcell-${i}"></div>`;
 
-            let drops = [];
-            if (tipo === 'false-win') drops = [ {val: `x0.3`, style: 'text-white text-3xl'} ];
-            else if (tipo === 'win-normal') drops = [ {val: 'x0.7', style: 'text-white text-2xl'}, {val: 'x0.5', style: 'text-white text-2xl'} ];
-            else if (tipo === 'win-mega') drops = [ {val: 'x2', style: 'text-white text-3xl'}, {val: 'x1', style: 'text-white text-xl'}, {val: 'MINI', style: 'text-green-400 text-3xl drop-shadow-[0_0_10px_#4ade80]'} ];
+            let drops = [ {val: 'x1', style: 'text-white text-xl'}, {val: 'x2', style: 'text-white text-3xl'}, {val: 'MINI', style: 'text-green-400 text-3xl drop-shadow-[0_0_10px_#4ade80]'} ];
 
             let spinCount = 3;
             let dropIndex = 0;
@@ -760,7 +711,7 @@
 
         /* --- LIMPIEZA TOTAL Y REINICIO --- */
         async function resetRound() {
-            // Actualización Saldo Backend (Intocable)
+            // Actualización Saldo Backend
             currentUser.saldo += finalPrizeAmount;
             finalPrizeAmount = 0;
             updateBalanceUI();
@@ -777,15 +728,20 @@
             
             const rContainer = document.getElementById('roulette-container');
             const rWrapper = document.getElementById('wheel-wrapper');
-            rContainer.style.height = '80px';
-            rWrapper.style.width = '120px';
-            rWrapper.style.height = '120px';
+            rContainer.style.height = '95px';
+            rWrapper.style.width = '100px';
+            rWrapper.style.height = '100px';
             
             document.getElementById('board-zone').classList.remove('board-dimmed');
             document.querySelectorAll('.board-cell').forEach(c => c.classList.remove('cell-fire', 'cell-winner'));
             
-            // LA CLAVE: Borramos las apuestas y vaciamos la mesa solo tras acabar todo el proceso.
+            document.getElementById('results-history').style.opacity = '1';
+            
+            // LA CLAVE: Borramos las apuestas de la mesa solo tras acabar todo el proceso y actualizar saldo.
             clearBets(); 
+            
+            document.getElementById('prev-bet-label').innerText = 'Tirada Anterior';
+            document.getElementById('total-bet-display').innerHTML = `${lastTotalBet.toLocaleString()} <span class="text-[9px] text-zinc-400">bits</span>`;
             
             const phaseText = document.getElementById('phase-text');
             phaseText.innerText = 'APUESTAS ABIERTAS';
