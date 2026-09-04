@@ -2,9 +2,11 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <!-- Meta viewport estricto para evitar zoom y dar sensación de App Nativa -->
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Casino Slots</title>
+    <title>Ruleta Casino Pro</title>
+    
+    <!-- Favicon de Ruleta -->
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🎡</text></svg>">
     
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -12,297 +14,411 @@
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
     <style>
-        /* Desactivar selección de texto y comportamientos web nativos */
         body {
             user-select: none;
             -webkit-user-select: none;
             -webkit-touch-callout: none;
-            overscroll-behavior-y: contain; /* Evita el pull-to-refresh en móviles */
+            overscroll-behavior-y: contain;
         }
 
-        /* Animación para el giro de la tragaperras */
-        @keyframes spin-blur {
-            0% { transform: translateY(0); filter: blur(0px); }
-            10% { filter: blur(4px); }
-            50% { transform: translateY(100px); filter: blur(8px); opacity: 0; }
-            50.1% { transform: translateY(-100px); }
-            90% { filter: blur(4px); }
-            100% { transform: translateY(0); filter: blur(0px); opacity: 1; }
-        }
-        .animate-spin-slot {
-            animation: spin-blur 0.15s linear infinite;
+        /* DISEÑO DE LA RULETA */
+        .roulette-container {
+            position: relative;
+            width: 280px;
+            height: 280px;
+            margin: 0 auto;
+            border-radius: 50%;
+            padding: 8px;
+            background: #1e293b; /* Borde exterior */
+            box-shadow: 0 0 20px rgba(0,0,0,0.8), inset 0 0 15px rgba(255,255,255,0.1);
         }
 
-        /* Animaciones para premios */
+        /* Luces de adorno alrededor de la ruleta */
+        .roulette-lights {
+            position: absolute;
+            inset: 0;
+            border-radius: 50%;
+            border: 6px dotted #fbbf24;
+            opacity: 0.6;
+            animation: rotate-lights 10s linear infinite;
+        }
+
+        .roulette-wheel {
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            background: conic-gradient(
+                #fbbf24 0deg 45deg,    /* Oro (x5) */
+                #475569 45deg 90deg,   /* Gris (x0) */
+                #22c55e 90deg 135deg,  /* Verde (x1.2) */
+                #a855f7 135deg 180deg, /* Morado (x0.3) */
+                #fbbf24 180deg 225deg, /* Oro (x5) */
+                #475569 225deg 270deg, /* Gris (x0) */
+                #22c55e 270deg 315deg, /* Verde (x1.2) */
+                #a855f7 315deg 360deg  /* Morado (x0.3) */
+            );
+            box-shadow: inset 0 0 30px rgba(0,0,0,0.5);
+            /* La transición controla la fluidez del giro (3.5 segundos con aceleración/desaceleración) */
+            transition: transform 3.5s cubic-bezier(0.15, 0.9, 0.2, 1);
+            position: relative;
+            overflow: hidden;
+        }
+
+        /* Textos dentro de la ruleta */
+        .slice-text {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            text-align: center;
+            font-weight: 900;
+            font-size: 1.25rem;
+            color: #fff;
+            text-shadow: 1px 1px 3px rgba(0,0,0,0.8);
+            transform-origin: 50% 50%;
+            display: flex;
+            justify-content: center;
+        }
+        .slice-text span {
+            padding-top: 15px; /* Empuja el texto hacia el borde */
+        }
+
+        /* El Marcador (Flecha superior) */
+        .roulette-pointer {
+            position: absolute;
+            top: -15px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 0;
+            height: 0;
+            border-left: 15px solid transparent;
+            border-right: 15px solid transparent;
+            border-top: 30px solid #ef4444; /* Rojo brillante */
+            z-index: 20;
+            filter: drop-shadow(0 4px 6px rgba(0,0,0,0.5));
+        }
+
+        /* ANIMACIONES DE PREMIOS (Popups) */
         @keyframes pop-in {
-            0% { transform: scale(0.5); opacity: 0; }
-            70% { transform: scale(1.2); }
-            100% { transform: scale(1); opacity: 1; }
+            0% { transform: scale(0.3) translateY(50px); opacity: 0; }
+            60% { transform: scale(1.1) translateY(-10px); opacity: 1; }
+            100% { transform: scale(1) translateY(0); opacity: 1; }
         }
-        @keyframes mega-fire {
-            0% { text-shadow: 0 0 10px #fbbf24, 0 0 20px #f59e0b, 0 0 40px #d97706; transform: scale(1); }
-            50% { text-shadow: 0 0 20px #fbbf24, 0 0 40px #f59e0b, 0 0 60px #d97706; transform: scale(1.1); }
-            100% { text-shadow: 0 0 10px #fbbf24, 0 0 20px #f59e0b, 0 0 40px #d97706; transform: scale(1); }
+        @keyframes rotate-lights { 100% { transform: rotate(360deg); } }
+
+        .popup-overlay {
+            background: rgba(0,0,0,0.85);
+            backdrop-filter: blur(4px);
         }
         
-        .win-false { color: #4ade80; animation: pop-in 0.4s ease-out; text-shadow: 0 0 15px rgba(74, 222, 128, 0.5); }
-        .win-normal { color: #22c55e; animation: pop-in 0.4s ease-out; text-shadow: 0 0 20px rgba(34, 197, 94, 0.7); }
-        .win-mega { color: #fbbf24; font-weight: 900; font-size: 3rem; animation: pop-in 0.4s ease-out, mega-fire 1s infinite alternate; }
-        .loss-text { color: #64748b; font-size: 1.5rem; transition: all 0.3s; }
+        .anim-mega { color: #fbbf24; text-shadow: 0 0 20px #f59e0b, 0 0 40px #d97706; animation: pop-in 0.5s ease-out; }
+        .anim-win { color: #22c55e; text-shadow: 0 0 20px rgba(34,197,94,0.8); animation: pop-in 0.5s ease-out; }
+        .anim-false { color: #a855f7; text-shadow: 0 0 20px rgba(168,85,247,0.8); animation: pop-in 0.5s ease-out; }
+        .anim-loss { color: #94a3b8; animation: pop-in 0.5s ease-out; }
+
+        /* Estilo activo para apuestas */
+        .bet-active { border-color: #3b82f6 !important; background: #1e3a8a !important; color: white !important; }
     </style>
 </head>
-<body class="bg-slate-900 text-white h-screen w-screen overflow-hidden flex flex-col items-center justify-center font-sans">
+<body class="bg-slate-950 text-white h-screen w-screen overflow-hidden flex flex-col items-center justify-center font-sans">
 
     <!-- 1. PANTALLA DE CARGA -->
-    <div id="loading-screen" class="absolute inset-0 z-50 bg-slate-900 flex flex-col items-center justify-center">
+    <div id="loading-screen" class="absolute inset-0 z-50 bg-slate-950 flex flex-col items-center justify-center">
         <div class="w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mb-4"></div>
-        <p class="text-slate-400 text-sm tracking-widest uppercase animate-pulse">Conectando...</p>
+        <p class="text-slate-400 text-sm tracking-widest uppercase animate-pulse">Conectando al servidor...</p>
     </div>
 
-    <!-- 2. PANTALLA DE ERROR / ACCESO DENEGADO -->
+    <!-- 2. PANTALLA DE ERROR -->
     <div id="error-screen" class="absolute inset-0 z-40 bg-black flex flex-col items-center justify-center hidden">
         <h1 class="text-red-600 text-4xl font-extrabold mb-2 uppercase tracking-tighter">Acceso Denegado</h1>
         <p class="text-slate-500 text-center px-6">Enlace inválido o código inexistente.</p>
     </div>
 
     <!-- 3. APP PRINCIPAL -->
-    <div id="app-screen" class="w-full max-w-md h-full mx-auto flex flex-col relative hidden bg-gradient-to-b from-slate-900 via-slate-800 to-slate-900">
+    <div id="app-screen" class="w-full max-w-md h-full mx-auto flex flex-col relative hidden bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-slate-800 via-slate-950 to-slate-950">
         
         <!-- HEADER -->
-        <header class="p-4 border-b border-slate-700 bg-slate-900/80 backdrop-blur-sm z-10">
+        <header class="px-5 py-4 border-b border-slate-800 z-10 flex-none">
             <div class="flex justify-between items-center mb-3">
                 <div class="flex flex-col">
-                    <span class="text-xs text-slate-400 uppercase font-bold tracking-wider">Jugador</span>
-                    <span id="player-name" class="text-lg font-bold text-white truncate max-w-[150px]">Cargando...</span>
+                    <span class="text-[10px] text-slate-400 uppercase font-bold tracking-wider">Jugador</span>
+                    <span id="player-name" class="text-base font-bold text-white truncate max-w-[150px]">...</span>
                 </div>
                 <div class="flex flex-col items-end">
-                    <span class="text-xs text-slate-400 uppercase font-bold tracking-wider">Saldo</span>
+                    <span class="text-[10px] text-slate-400 uppercase font-bold tracking-wider">Saldo Total</span>
                     <span id="player-balance" class="text-2xl font-black text-blue-400 drop-shadow-md">0</span>
                 </div>
             </div>
 
-            <!-- BARRA DE PROGRESO (ROLLOVER) -->
-            <div class="w-full bg-slate-800 rounded-full h-2 mb-1 overflow-hidden border border-slate-700 relative">
-                <div id="progress-bar" class="bg-gradient-to-r from-blue-600 to-blue-400 h-2 rounded-full transition-all duration-500" style="width: 0%"></div>
+            <!-- BARRA DE PROGRESO -->
+            <div class="w-full bg-slate-900 rounded-full h-2.5 mb-1 overflow-hidden border border-slate-700 relative">
+                <div id="progress-bar" class="bg-gradient-to-r from-blue-600 to-blue-400 h-full rounded-full transition-all duration-500" style="width: 0%"></div>
             </div>
-            <div class="flex justify-between items-center">
-                <span id="progress-text" class="text-xs font-bold text-slate-300">Progreso: 0.0%</span>
-                
-                <!-- BOTÓN RETIRO (Oculto por defecto) -->
+            <div class="flex justify-between items-center mt-1">
+                <span id="progress-text" class="text-[11px] font-bold text-slate-400">Progreso: 0.0%</span>
                 <button id="withdraw-btn" onclick="alert('Contacta por WhatsApp para tramitar tu retiro de dinero.');" class="hidden text-[10px] bg-green-500 hover:bg-green-400 text-slate-900 font-extrabold px-3 py-1 rounded shadow-[0_0_10px_rgba(34,197,94,0.5)] uppercase tracking-wider transition-all animate-pulse">
-                    Solicitar Retiro
+                    Retirar Dinero
                 </button>
             </div>
         </header>
 
-        <!-- ZONA DE JUEGO (TRAGAPERRAS) -->
-        <main class="flex-1 flex flex-col items-center justify-center relative p-6">
+        <!-- ZONA CENTRAL (Tabla Pagos + Ruleta) -->
+        <main class="flex-1 flex flex-col items-center justify-around py-4 px-2 overflow-y-auto">
             
-            <!-- Marco de la máquina -->
-            <div class="w-full aspect-square max-w-[320px] bg-slate-900 border-4 border-slate-700 rounded-2xl shadow-[0_0_50px_rgba(0,0,0,0.8)] inset-0 flex items-center justify-center relative overflow-hidden">
-                <!-- Luces decorativas (bordes) -->
-                <div class="absolute inset-0 border-[6px] border-slate-800 rounded-xl pointer-events-none"></div>
-                
-                <!-- Contenedor del resultado -->
-                <div id="slot-display" class="text-5xl font-black text-white text-center flex flex-col items-center justify-center transition-all duration-300">
-                    <span class="text-slate-600 text-6xl">🎰</span>
-                    <span class="text-sm text-slate-500 mt-4 uppercase tracking-widest">Listo para tirar</span>
+            <!-- TABLA DE PREMIOS (Dopamina Visual) -->
+            <div class="w-full px-4 mb-2">
+                <div class="grid grid-cols-2 gap-2 text-center text-xs font-bold">
+                    <div class="bg-slate-900/80 border border-yellow-500/30 rounded-lg p-2 shadow-[0_0_15px_rgba(251,191,36,0.1)]">
+                        <span class="text-yellow-400 block mb-1">MEGAFIRE x5</span>
+                        <span id="prize-mega" class="text-white text-lg font-black">500</span> pts
+                    </div>
+                    <div class="bg-slate-900/80 border border-green-500/30 rounded-lg p-2 shadow-[0_0_15px_rgba(34,197,94,0.1)]">
+                        <span class="text-green-400 block mb-1">GANADOR x1.2</span>
+                        <span id="prize-win" class="text-white text-lg font-black">120</span> pts
+                    </div>
+                    <div class="bg-slate-900/80 border border-purple-500/30 rounded-lg p-2 shadow-[0_0_15px_rgba(168,85,247,0.1)]">
+                        <span class="text-purple-400 block mb-1">PREMIO x0.3</span>
+                        <span id="prize-false" class="text-white text-lg font-black">30</span> pts
+                    </div>
+                    <div class="bg-slate-900/80 border border-slate-500/30 rounded-lg p-2 opacity-70">
+                        <span class="text-slate-400 block mb-1">CASI... x0</span>
+                        <span id="prize-loss" class="text-white text-lg font-black">0</span> pts
+                    </div>
                 </div>
             </div>
-            
+
+            <!-- LA RULETA FÍSICA -->
+            <div class="roulette-container my-4 shrink-0">
+                <div class="roulette-lights"></div>
+                <div class="roulette-pointer"></div>
+                <div id="wheel" class="roulette-wheel">
+                    <!-- Textos rotados. Cada porción mide 45 grados. El centro está en: 22.5, 67.5, etc. -->
+                    <div class="slice-text" style="transform: rotate(22.5deg);"><span class="text-yellow-900">x5</span></div>
+                    <div class="slice-text" style="transform: rotate(67.5deg);"><span class="text-slate-300">x0</span></div>
+                    <div class="slice-text" style="transform: rotate(112.5deg);"><span class="text-green-900">x1.2</span></div>
+                    <div class="slice-text" style="transform: rotate(157.5deg);"><span class="text-purple-900">x0.3</span></div>
+                    <div class="slice-text" style="transform: rotate(202.5deg);"><span class="text-yellow-900">x5</span></div>
+                    <div class="slice-text" style="transform: rotate(247.5deg);"><span class="text-slate-300">x0</span></div>
+                    <div class="slice-text" style="transform: rotate(292.5deg);"><span class="text-green-900">x1.2</span></div>
+                    <div class="slice-text" style="transform: rotate(337.5deg);"><span class="text-purple-900">x0.3</span></div>
+                </div>
+                <!-- Punto central -->
+                <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-10 h-10 bg-slate-900 rounded-full border-4 border-slate-700 z-10 shadow-inner"></div>
+            </div>
+
         </main>
 
-        <!-- BOTÓN DE ACCIÓN FIJO ABAJO -->
-        <div class="p-4 bg-slate-900 border-t border-slate-800 pb-8">
-            <button id="spin-btn" class="w-full h-20 bg-gradient-to-b from-red-500 to-red-700 active:from-red-700 active:to-red-900 rounded-xl shadow-[0_8px_0_#7f1d1d,0_15px_20px_rgba(0,0,0,0.5)] active:shadow-[0_0px_0_#7f1d1d,0_5px_10px_rgba(0,0,0,0.5)] active:translate-y-2 transition-all flex flex-col items-center justify-center select-none" style="-webkit-tap-highlight-color: transparent;">
-                <span class="text-3xl font-black text-white tracking-widest drop-shadow-md">TIRAR</span>
-                <span class="text-sm font-bold text-red-200/80 tracking-widest uppercase">Coste: 100 pts</span>
+        <!-- CONTROLES FIJOS ABAJO -->
+        <div class="bg-slate-900 border-t border-slate-800 p-4 pb-6 flex-none rounded-t-2xl shadow-[0_-10px_20px_rgba(0,0,0,0.5)]">
+            
+            <!-- Selector de Apuesta -->
+            <p class="text-center text-xs text-slate-400 uppercase font-bold mb-2">Selecciona tu apuesta</p>
+            <div class="flex justify-between gap-2 mb-4">
+                <button onclick="setBet(100)" class="bet-btn bet-active flex-1 py-2 bg-slate-800 border border-slate-600 rounded-lg text-slate-300 font-bold transition-all text-sm">100</button>
+                <button onclick="setBet(250)" class="bet-btn flex-1 py-2 bg-slate-800 border border-slate-600 rounded-lg text-slate-300 font-bold transition-all text-sm">250</button>
+                <button onclick="setBet(500)" class="bet-btn flex-1 py-2 bg-slate-800 border border-slate-600 rounded-lg text-slate-300 font-bold transition-all text-sm">500</button>
+                <button onclick="setBet(1000)" class="bet-btn flex-1 py-2 bg-slate-800 border border-slate-600 rounded-lg text-slate-300 font-bold transition-all text-sm">1K</button>
+            </div>
+
+            <!-- Botón de Girar -->
+            <button id="spin-btn" class="w-full h-16 bg-gradient-to-b from-red-500 to-red-700 active:from-red-700 active:to-red-900 rounded-xl shadow-[0_6px_0_#7f1d1d,0_15px_20px_rgba(0,0,0,0.5)] active:shadow-[0_0px_0_#7f1d1d,0_5px_10px_rgba(0,0,0,0.5)] active:translate-y-[6px] transition-all flex flex-col items-center justify-center select-none disabled:opacity-50 disabled:pointer-events-none" style="-webkit-tap-highlight-color: transparent;">
+                <span class="text-2xl font-black text-white tracking-widest drop-shadow-md">GIRAR RULETA</span>
             </button>
         </div>
+
+        <!-- POPUP RESULTADO VISUAL (Oculto por defecto) -->
+        <div id="result-popup" class="absolute inset-0 z-50 popup-overlay flex-col items-center justify-center hidden">
+            <div id="result-content" class="text-center flex flex-col items-center justify-center">
+                <!-- Se inyecta por JS -->
+            </div>
+        </div>
+
     </div>
 
     <!-- JAVASCRIPT -->
     <script>
-        // 1. CONFIGURACIÓN SUPABASE
+        // 1. CONFIGURACIÓN
         const { createClient } = supabase;
         const supabaseUrl = 'https://qutkwzjchchhbqfhtaxi.supabase.co';
         const supabaseKey = 'sb_publishable_fv4VSDx-LJrkorzY0bOKaA_0poFJcU1';
         const supabaseClient = createClient(supabaseUrl, supabaseKey);
 
-        // 2. VARIABLES GLOBALES DE ESTADO
+        // 2. ESTADO GLOBAL
         let currentUser = null;
         let isSpinning = false;
-        const COSTO_TIRADA = 100;
+        let currentBet = 100;
+        let currentRotation = 0; // Grados acumulados de la ruleta
 
-        // Elementos del DOM
-        const elLoading = document.getElementById('loading-screen');
-        const elError = document.getElementById('error-screen');
+        // Elementos DOM
         const elApp = document.getElementById('app-screen');
-        
-        const elName = document.getElementById('player-name');
-        const elBalance = document.getElementById('player-balance');
-        const elProgress = document.getElementById('progress-bar');
-        const elProgressText = document.getElementById('progress-text');
-        const elWithdrawBtn = document.getElementById('withdraw-btn');
-        
-        const elSlot = document.getElementById('slot-display');
-        const elSpinBtn = document.getElementById('spin-btn');
+        const wheelEl = document.getElementById('wheel');
+        const popup = document.getElementById('result-popup');
+        const popupContent = document.getElementById('result-content');
 
-        // 3. INICIALIZACIÓN (LEER CÓDIGO)
+        // 3. INICIALIZACIÓN
         document.addEventListener('DOMContentLoaded', async () => {
             const urlParams = new URLSearchParams(window.location.search);
             const codigoUrl = urlParams.get('codigo');
 
-            if (!codigoUrl) {
-                showError();
-                return;
-            }
+            if (!codigoUrl) return document.getElementById('error-screen').classList.remove('hidden');
 
-            // Consultar a Supabase
-            const { data, error } = await supabaseClient
-                .from('usuarios')
-                .select('*')
-                .eq('codigo', codigoUrl)
-                .single();
+            const { data, error } = await supabaseClient.from('usuarios').select('*').eq('codigo', codigoUrl).single();
 
             if (error || !data) {
-                showError();
+                document.getElementById('loading-screen').classList.add('hidden');
+                document.getElementById('error-screen').classList.remove('hidden');
             } else {
                 currentUser = data;
-                startApp();
+                document.getElementById('loading-screen').classList.add('hidden');
+                elApp.classList.remove('hidden');
+                updatePrizeBoard();
+                updateUI();
             }
         });
 
-        function showError() {
-            elLoading.classList.add('hidden');
-            elError.classList.remove('hidden');
+        // 4. LÓGICA DE APUESTAS
+        function setBet(amount) {
+            if (isSpinning) return;
+            currentBet = amount;
+            
+            // Estilo de botones
+            document.querySelectorAll('.bet-btn').forEach(btn => {
+                if(parseInt(btn.innerText.replace('1K', '1000')) === amount) {
+                    btn.classList.add('bet-active');
+                } else {
+                    btn.classList.remove('bet-active');
+                }
+            });
+
+            updatePrizeBoard();
         }
 
-        function startApp() {
-            elLoading.classList.add('hidden');
-            elApp.classList.remove('hidden');
-            updateUI();
+        function updatePrizeBoard() {
+            // Actualiza la tabla de dopamina visual multiplicando por la apuesta actual
+            document.getElementById('prize-mega').textContent = (currentBet * 5).toLocaleString('es-ES');
+            document.getElementById('prize-win').textContent = (currentBet * 1.2).toLocaleString('es-ES');
+            document.getElementById('prize-false').textContent = (currentBet * 0.3).toLocaleString('es-ES');
+            document.getElementById('prize-loss').textContent = "0";
         }
 
-        // 4. ACTUALIZAR INTERFAZ
+        // 5. ACTUALIZAR INTERFAZ Y PROGRESO
         function updateUI() {
-            // Nombre y Saldo
-            elName.textContent = currentUser.nombre;
-            elBalance.textContent = parseFloat(currentUser.saldo).toLocaleString('es-ES');
+            document.getElementById('player-name').textContent = currentUser.nombre;
+            document.getElementById('player-balance').textContent = parseFloat(currentUser.saldo).toLocaleString('es-ES');
 
-            // Calcular Rollover (Progreso)
             let porcentaje = (currentUser.tiradas_realizadas / currentUser.tiradas_objetivo) * 100;
             if (porcentaje > 100) porcentaje = 100;
 
-            elProgress.style.width = `${porcentaje}%`;
-            elProgressText.textContent = `Progreso: ${porcentaje.toFixed(1)}%`;
+            const barra = document.getElementById('progress-bar');
+            barra.style.width = `${porcentaje}%`;
+            document.getElementById('progress-text').textContent = `Progreso: ${porcentaje.toFixed(1)}%`;
 
-            // Mostrar botón de retiro si llegó al 100%
             if (porcentaje >= 100) {
-                elProgress.classList.replace('from-blue-600', 'from-green-500');
-                elProgress.classList.replace('to-blue-400', 'to-green-400');
-                elWithdrawBtn.classList.remove('hidden');
-            } else {
-                elWithdrawBtn.classList.add('hidden');
+                barra.classList.replace('from-blue-600', 'from-green-500');
+                barra.classList.replace('to-blue-400', 'to-green-400');
+                document.getElementById('withdraw-btn').classList.remove('hidden');
             }
         }
 
-        // 5. LÓGICA MATEMÁTICA Y PSICOLÓGICA (LAS FASES)
+        // 6. MATEMÁTICAS (Fases y "Falso Ganar")
         function getResultadoTirada(tiradas) {
             const rand = Math.random();
-            let premio = 0;
+            let mult = 0;
             let tipo = '';
-            let texto = '';
-
-            // FASE 1: Tirada 1 a la 50
-            if (tiradas <= 50) {
-                if (rand < 0.20) { // 20%
-                    premio = 0; tipo = 'loss'; texto = 'CASI...';
-                } else if (rand < 0.50) { // 30% (Falso ganar)
-                    premio = 30; tipo = 'false-win'; texto = '¡PREMIO! +30';
-                } else if (rand < 0.90) { // 40%
-                    premio = 120; tipo = 'win-normal'; texto = '¡GANADOR! +120';
-                } else { // 10%
-                    premio = 500; tipo = 'win-mega'; texto = '¡MEGAFIRE! +500';
-                }
-            } 
-            // FASE 2: Tirada 51 en adelante (Desangre)
-            else {
-                if (rand < 0.50) { // 50%
-                    premio = 0; tipo = 'loss'; texto = 'CASI...';
-                } else if (rand < 0.90) { // 40% (Falso ganar)
-                    premio = 30; tipo = 'false-win'; texto = '¡PREMIO! +30';
-                } else if (rand < 0.98) { // 8%
-                    premio = 120; tipo = 'win-normal'; texto = '¡GANADOR! +120';
-                } else { // 2%
-                    premio = 500; tipo = 'win-mega'; texto = '¡MEGAFIRE! +500';
-                }
+            
+            if (tiradas <= 50) { // FASE 1
+                if (rand < 0.20) { mult = 0; tipo = 'loss'; }
+                else if (rand < 0.50) { mult = 0.3; tipo = 'false-win'; }
+                else if (rand < 0.90) { mult = 1.2; tipo = 'win-normal'; }
+                else { mult = 5; tipo = 'win-mega'; }
+            } else { // FASE 2
+                if (rand < 0.50) { mult = 0; tipo = 'loss'; }
+                else if (rand < 0.90) { mult = 0.3; tipo = 'false-win'; }
+                else if (rand < 0.98) { mult = 1.2; tipo = 'win-normal'; }
+                else { mult = 5; tipo = 'win-mega'; }
             }
-
-            return { premio, tipo, texto };
+            return { mult, tipo };
         }
 
-        // 6. EJECUCIÓN DE LA TIRADA
-        elSpinBtn.addEventListener('click', async () => {
-            // Prevenir doble click y validación de saldo
+        // 7. EJECUCIÓN DE LA RULETA
+        document.getElementById('spin-btn').addEventListener('click', () => {
             if (isSpinning) return;
-            if (currentUser.saldo < COSTO_TIRADA) {
-                elSlot.innerHTML = `<span class="text-red-500 text-3xl uppercase font-bold text-center">Saldo<br>Insuficiente</span>`;
+            if (currentUser.saldo < currentBet) {
+                alert('Saldo insuficiente para esta apuesta.');
                 return;
             }
 
-            // 1. Bloquear botón e iniciar lógicas
             isSpinning = true;
-            elSpinBtn.style.opacity = '0.5';
+            document.getElementById('spin-btn').disabled = true;
 
-            // 2. Descuento Inmediato (Ilusión de velocidad)
-            currentUser.saldo -= COSTO_TIRADA;
+            // Resta inmediata
+            currentUser.saldo -= currentBet;
             currentUser.tiradas_realizadas += 1;
-            updateUI(); // Se resta el dinero del DOM al instante
+            updateUI();
 
-            // 3. Determinar premio matemático
-            const resultado = getResultadoTirada(currentUser.tiradas_realizadas);
+            // Determinar premio
+            const { mult, tipo } = getResultadoTirada(currentUser.tiradas_realizadas);
+            const premioFinal = currentBet * mult;
+
+            // Centros de los sectores en grados (El CSS gira sentido horario. 0º está arriba)
+            // x5: 22.5 o 202.5 | x0: 67.5 o 247.5 | x1.2: 112.5 o 292.5 | x0.3: 157.5 o 337.5
+            let angleToLand = 0;
+            const rnd = Math.random() < 0.5;
+            if (mult === 5) angleToLand = rnd ? 22.5 : 202.5;
+            else if (mult === 0) angleToLand = rnd ? 67.5 : 247.5;
+            else if (mult === 1.2) angleToLand = rnd ? 112.5 : 292.5;
+            else if (mult === 0.3) angleToLand = rnd ? 157.5 : 337.5;
+
+            // Para que un ángulo caiga arriba (marcador), hay que girar la ruleta (360 - ángulo).
+            // Le sumamos 3600 grados (10 vueltas completas) para dar emoción.
+            const spinAmount = 3600 + (360 - angleToLand);
             
-            // 4. Animación CSS "Girando"
-            elSlot.innerHTML = `<span class="text-6xl animate-spin-slot">🎰</span>`;
+            // Calculamos rotación acumulativa para que no retroceda
+            const currentMod = currentRotation % 360;
+            currentRotation += spinAmount - currentMod;
+
+            // Girar visualmente
+            wheelEl.style.transform = `rotate(${currentRotation}deg)`;
             
-            // Efecto de sonido psicológico (Vibración si el móvil lo permite)
+            // Si el móvil permite vibración, hacemos un pulso ligero al empezar
             if (navigator.vibrate) navigator.vibrate(50);
 
-            // 5. Finalizar animación (1.2 segundos para no aburrir)
+            // Al terminar el CSS transition (3.5s)
             setTimeout(async () => {
                 
-                // Mostrar Premio Visual
-                elSlot.innerHTML = `<span class="${resultado.tipo} text-center flex flex-col leading-tight"><span class="text-5xl lg:text-6xl">${resultado.texto.replace(' ', '<br>')}</span></span>`;
-                
-                // Si hay premio, vibración de victoria
-                if (resultado.premio > 0 && navigator.vibrate) {
-                    navigator.vibrate([100, 50, 100]);
-                }
+                // Mostrar Popup
+                let popupHtml = '';
+                if (tipo === 'win-mega') popupHtml = `<span class="anim-mega text-6xl font-black mb-2 uppercase">¡MEGAFIRE!</span><span class="anim-mega text-4xl font-bold">+${premioFinal}</span>`;
+                else if (tipo === 'win-normal') popupHtml = `<span class="anim-win text-5xl font-black mb-2 uppercase">¡GANADOR!</span><span class="anim-win text-4xl font-bold">+${premioFinal}</span>`;
+                else if (tipo === 'false-win') popupHtml = `<span class="anim-false text-5xl font-black mb-2 uppercase">¡PREMIO!</span><span class="anim-false text-4xl font-bold">+${premioFinal}</span>`; // El efecto falso
+                else popupHtml = `<span class="anim-loss text-4xl font-bold uppercase mb-2">CASI...</span><span class="anim-loss text-xl text-slate-400">Inténtalo de nuevo</span>`;
 
-                // Sumar premio al estado local y actualizar UI
-                currentUser.saldo += resultado.premio;
-                updateUI();
+                popupContent.innerHTML = popupHtml;
+                popup.classList.remove('hidden');
+                popup.classList.add('flex');
 
-                // Desbloquear botón
-                isSpinning = false;
-                elSpinBtn.style.opacity = '1';
+                // Vibración de premio
+                if (premioFinal > 0 && navigator.vibrate) navigator.vibrate([100, 50, 100]);
 
-                // 6. Guardar en Base de Datos en segundo plano (Asíncrono, sin bloquear al usuario)
-                const { error } = await supabaseClient
-                    .from('usuarios')
-                    .update({ 
+                // Sumar premio y cerrar popup
+                setTimeout(async () => {
+                    popup.classList.add('hidden');
+                    popup.classList.remove('flex');
+                    
+                    currentUser.saldo += premioFinal;
+                    updateUI();
+                    
+                    isSpinning = false;
+                    document.getElementById('spin-btn').disabled = false;
+
+                    // Guardar en Supabase silenciosamente
+                    await supabaseClient.from('usuarios').update({ 
                         saldo: currentUser.saldo, 
                         tiradas_realizadas: currentUser.tiradas_realizadas 
-                    })
-                    .eq('id', currentUser.id);
+                    }).eq('id', currentUser.id);
 
-                if (error) {
-                    console.error("Error guardando progreso:", error);
-                    // Opcional: Manejo de errores silencioso para no romper la experiencia
-                }
+                }, 1500); // El popup dura 1.5 seg
 
-            }, 1200); // 1.2s de pura fricción visual
+            }, 3500); // 3.5 seg es lo que dura la transición CSS de la ruleta
         });
     </script>
 </body>
