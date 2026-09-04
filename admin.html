@@ -4,70 +4,53 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Admin - Megafire Casino</title>
-    
-    <!-- Favicon de Ruleta -->
     <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🎰</text></svg>">
-    
-    <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
-    
-    <!-- Supabase CDN -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body class="bg-slate-100 text-slate-800 font-sans min-h-screen pb-20">
 
-    <!-- Header Fijo -->
     <header class="bg-slate-900 text-white p-4 shadow-lg sticky top-0 z-50 flex justify-between items-center">
         <h1 class="text-xl font-black tracking-wider flex items-center gap-2">
             <span>⚙️</span> ADMIN MEGAFIRE
         </h1>
-        <button onclick="fetchUsers()" class="p-3 bg-slate-800 rounded-lg hover:bg-slate-700 active:scale-95 transition shadow" title="Actualizar lista">
-            🔄 Actualizar
-        </button>
+        <!-- Indicador de conexión en tiempo real -->
+        <div class="flex items-center gap-2 text-xs font-bold text-green-400 bg-slate-800 px-3 py-1.5 rounded-full">
+            <span class="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span> EN VIVO
+        </div>
     </header>
 
     <main class="max-w-4xl mx-auto p-4 mt-2 grid gap-6">
 
-        <!-- PANEL DE CREACIÓN DE USUARIOS -->
+        <!-- PANEL DE CREACIÓN -->
         <section class="bg-white rounded-2xl shadow-sm border border-slate-200 p-5">
             <h2 class="text-xl font-black text-slate-900 mb-4 border-b pb-3">➕ Nuevo Jugador</h2>
             
             <form id="create-user-form" class="space-y-5">
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                        <label class="block text-sm font-bold text-slate-600 mb-2">Nombre del amigo</label>
-                        <input type="text" id="input-nombre" required placeholder="Ej: Juan" class="w-full bg-slate-50 border border-slate-300 text-slate-900 text-lg rounded-xl focus:ring-2 focus:ring-blue-500 focus:outline-none block p-4">
-                    </div>
-                    <div>
-                        <label class="block text-sm font-bold text-slate-600 mb-2">Ingreso Físico (€)</label>
-                        <input type="number" id="input-euros" required min="1" step="0.1" placeholder="Ej: 5" class="w-full bg-slate-50 border border-slate-300 text-slate-900 text-lg rounded-xl focus:ring-2 focus:ring-blue-500 focus:outline-none block p-4">
-                    </div>
+                    <input type="text" id="input-nombre" required placeholder="Nombre (Ej: Juan)" class="w-full bg-slate-50 border border-slate-300 text-slate-900 text-lg rounded-xl focus:ring-2 focus:ring-blue-500 focus:outline-none block p-4">
+                    <input type="number" id="input-euros" required min="1" step="0.1" placeholder="Ingreso Físico (€)" class="w-full bg-slate-50 border border-slate-300 text-slate-900 text-lg rounded-xl focus:ring-2 focus:ring-blue-500 focus:outline-none block p-4">
                 </div>
 
-                <div>
-                    <label class="block text-sm font-bold text-slate-600 mb-2">Oferta / Bloqueo (Psicología)</label>
-                    <select id="input-bono" class="w-full bg-slate-50 border border-slate-300 text-slate-900 text-base rounded-xl focus:ring-2 focus:ring-blue-500 focus:outline-none block p-4">
-                        <option value="sin_bono">NORMAL (x10,000 pts | Bloqueo: 150 tiradas)</option>
-                        <option value="con_bono">BONO DOBLE (Doble saldo | Bloqueo: 500 tiradas)</option>
-                    </select>
-                </div>
+                <select id="input-bono" class="w-full bg-slate-50 border border-slate-300 text-slate-900 text-base rounded-xl focus:ring-2 focus:ring-blue-500 focus:outline-none block p-4">
+                    <option value="sin_bono">NORMAL (x10,000 pts | Bloqueo: 150 tiradas)</option>
+                    <option value="con_bono">BONO DOBLE (Doble saldo | Bloqueo: 500 tiradas)</option>
+                </select>
 
                 <button type="submit" id="btn-crear" class="w-full text-white bg-blue-600 active:bg-blue-800 font-black rounded-xl text-lg px-5 py-4 text-center transition-transform active:scale-95 shadow-lg mt-2">
                     CREAR Y GENERAR ENLACE
                 </button>
             </form>
 
-            <!-- Resultado: Enlace Mágico -->
             <div id="magic-link-container" class="hidden mt-5 p-4 bg-green-50 border-2 border-green-400 rounded-xl">
                 <p class="text-sm text-green-800 font-black mb-2 uppercase">✅ Enlace Listo (Cópialo):</p>
                 <input type="text" id="magic-link-url" readonly class="w-full bg-white border border-green-300 text-green-900 text-sm font-mono rounded-lg p-3 focus:outline-none select-all">
             </div>
         </section>
 
-        <!-- LISTA DE USUARIOS ACTIVOS -->
+        <!-- LISTA EN TIEMPO REAL -->
         <section class="bg-white rounded-2xl shadow-sm border border-slate-200 p-5">
             <h2 class="text-xl font-black text-slate-900 mb-4 border-b pb-3">👥 Jugadores Activos</h2>
-            
             <div id="users-grid" class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div class="text-slate-400 text-center py-6 font-bold w-full">Cargando jugadores...</div>
             </div>
@@ -75,72 +58,21 @@
     </main>
 
     <script>
-        // --- 1. CONFIGURACIÓN SUPABASE (Tus credenciales exactas) ---
+        // CONFIGURACIÓN SUPABASE
         const SUPABASE_URL = 'https://qutkwzjchchhbqfhtaxi.supabase.co';
         const SUPABASE_KEY = 'sb_publishable_fv4VSDx-LJrkorzY0bOKaA_0poFJcU1';
         const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-        // --- 2. LÓGICA DE CREACIÓN DE USUARIOS ---
-        document.getElementById('create-user-form').addEventListener('submit', async (e) => {
-            e.preventDefault(); 
-            
-            const btn = document.getElementById('btn-crear');
-            btn.disabled = true;
-            btn.innerText = "⏳ GENERANDO...";
+        // --- 1. LÓGICA DE TIEMPO REAL (NUEVO) ---
+        // Esto escucha la base de datos 24/7. Si hay cualquier cambio, recarga la lista sola.
+        supabase
+            .channel('cambios-usuarios')
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'usuarios' }, payload => {
+                fetchUsers(); // Se auto-actualiza
+            })
+            .subscribe();
 
-            try {
-                const nombre = document.getElementById('input-nombre').value.trim();
-                const euros = parseFloat(document.getElementById('input-euros').value);
-                const bono = document.getElementById('input-bono').value;
-
-                let saldo_inicial = euros * 10000;
-                let tiradas_objetivo = 150;
-
-                if (bono === 'con_bono') {
-                    saldo_inicial *= 2; 
-                    tiradas_objetivo = 500; 
-                }
-
-                // Generar código aleatorio de 5 caracteres
-                const codigo = Math.random().toString(36).substring(2, 7).toUpperCase();
-
-                // Insertar en Supabase
-                const { data, error } = await supabase
-                    .from('usuarios')
-                    .insert([{
-                        codigo: codigo,
-                        nombre: nombre,
-                        saldo: saldo_inicial,
-                        tiradas_realizadas: 0,
-                        tiradas_objetivo: tiradas_objetivo
-                    }]);
-
-                if (error) throw error;
-
-                // Generar URL dinámica limpia (cambia admin.html por index.html)
-                let currentUrl = window.location.origin + window.location.pathname;
-                let magicUrl = currentUrl.replace(/admin\.html$/, 'index.html') + '?codigo=' + codigo;
-                
-                // Si la URL actual no acaba en admin.html (ej: raiz de vercel), añadimos /index.html
-                if (!currentUrl.endsWith('admin.html')) {
-                    magicUrl = window.location.origin + '/index.html?codigo=' + codigo;
-                }
-                
-                document.getElementById('magic-link-url').value = magicUrl;
-                document.getElementById('magic-link-container').classList.remove('hidden');
-
-                document.getElementById('create-user-form').reset();
-                fetchUsers();
-                
-            } catch (err) {
-                alert("❌ Error al crear: " + err.message);
-            } finally {
-                btn.disabled = false;
-                btn.innerText = "CREAR Y GENERAR ENLACE";
-            }
-        });
-
-        // --- 3. LÓGICA PARA MOSTRAR LA LISTA DE USUARIOS ---
+        // --- 2. LEER USUARIOS ---
         async function fetchUsers() {
             const container = document.getElementById('users-grid');
             
@@ -186,44 +118,80 @@
                             </div>
                         </div>
 
-                        <button onclick="recargarSaldo('${user.id}', ${user.saldo}, this)" class="mt-auto w-full bg-emerald-500 active:bg-emerald-600 text-white font-black py-3 px-4 rounded-xl transition-transform active:scale-95 shadow flex items-center justify-center text-lg gap-2">
+                        <button onclick="recargarSaldo('${user.id}', ${user.saldo})" class="mt-auto w-full bg-emerald-500 active:bg-emerald-600 text-white font-black py-3 px-4 rounded-xl transition-transform active:scale-95 shadow flex items-center justify-center text-lg gap-2">
                             💵 +10K pts (Recarga)
                         </button>
                     `;
                     container.appendChild(card);
                 });
             } catch (err) {
-                container.innerHTML = `<div class="text-red-500 font-bold text-center w-full py-6">Error al cargar datos: ${err.message}</div>`;
+                container.innerHTML = `<div class="text-red-500 font-bold text-center w-full py-6">Error conectando: ${err.message}</div>`;
             }
         }
 
-        // --- 4. FUNCIÓN RECARGA RÁPIDA (+10,000 pts) ---
-        async function recargarSaldo(userId, saldoActual, btnElement) {
-            const originalText = btnElement.innerHTML;
-            btnElement.disabled = true;
-            btnElement.innerHTML = "⏳ RECARGANDO...";
-            btnElement.classList.replace('bg-emerald-500', 'bg-slate-400');
+        // --- 3. CREAR USUARIO ---
+        document.getElementById('create-user-form').addEventListener('submit', async (e) => {
+            e.preventDefault(); 
+            const btn = document.getElementById('btn-crear');
+            btn.disabled = true;
+            btn.innerText = "⏳ GENERANDO...";
 
             try {
-                const nuevoSaldo = saldoActual + 10000;
+                const nombre = document.getElementById('input-nombre').value.trim();
+                const euros = parseFloat(document.getElementById('input-euros').value);
+                const bono = document.getElementById('input-bono').value;
 
-                const { data, error } = await supabase
+                let saldo_inicial = euros * 10000;
+                let tiradas_objetivo = 150;
+
+                if (bono === 'con_bono') {
+                    saldo_inicial *= 2; 
+                    tiradas_objetivo = 500; 
+                }
+
+                const codigo = Math.random().toString(36).substring(2, 7).toUpperCase();
+
+                const { error } = await supabase
                     .from('usuarios')
-                    .update({ saldo: nuevoSaldo })
-                    .eq('id', userId);
+                    .insert([{ codigo, nombre, saldo: saldo_inicial, tiradas_realizadas: 0, tiradas_objetivo }]);
 
                 if (error) throw error;
 
-                fetchUsers();
+                // Enlace adaptativo (funciona en Vercel, Local, etc)
+                let currentUrl = window.location.origin + window.location.pathname;
+                let magicUrl = currentUrl.replace(/admin\.html$/, 'index.html') + '?codigo=' + codigo;
+                if (!currentUrl.endsWith('admin.html')) magicUrl = window.location.origin + '/index.html?codigo=' + codigo;
+                
+                document.getElementById('magic-link-url').value = magicUrl;
+                document.getElementById('magic-link-container').classList.remove('hidden');
+                document.getElementById('create-user-form').reset();
+                
+                // NOTA: No llamamos a fetchUsers() aquí porque el Tiempo Real ya lo hace solo.
+                
             } catch (err) {
-                alert("❌ Error en la recarga: " + err.message);
-                btnElement.disabled = false;
-                btnElement.innerHTML = originalText;
-                btnElement.classList.replace('bg-slate-400', 'bg-emerald-500');
+                alert("❌ Error: " + err.message);
+            } finally {
+                btn.disabled = false;
+                btn.innerText = "CREAR Y GENERAR ENLACE";
+            }
+        });
+
+        // --- 4. RECARGA RÁPIDA ---
+        async function recargarSaldo(userId, saldoActual) {
+            try {
+                const { error } = await supabase
+                    .from('usuarios')
+                    .update({ saldo: saldoActual + 10000 })
+                    .eq('id', userId);
+
+                if (error) throw error;
+                // NOTA: El saldo se actualiza solo en pantalla gracias al Tiempo Real.
+            } catch (err) {
+                alert("❌ Error: " + err.message);
             }
         }
 
-        // Cargar usuarios al entrar
+        // Carga inicial
         window.addEventListener('DOMContentLoaded', fetchUsers);
     </script>
 </body>
