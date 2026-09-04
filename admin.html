@@ -50,7 +50,7 @@
                         <thead class="hidden lg:table-header-group text-xs text-gray-400 uppercase bg-gray-900/50">
                             <tr>
                                 <th class="px-4 py-3">Nombre</th>
-                                <th class="px-4 py-3">Link</th>
+                                <th class="px-4 py-3">Código</th>
                                 <th class="px-4 py-3 text-green-400">T. Ingresado</th>
                                 <th class="px-4 py-3 text-blue-400">Saldo</th>
                                 <th class="px-4 py-3 text-orange-400">Tipo</th>
@@ -80,6 +80,13 @@
             return codigo;
         }
 
+        // COPIAR LINK/CÓDIGO (NUEVA FUNCIÓN RECUPERADA)
+        function copiarLink(link) {
+            navigator.clipboard.writeText(link).then(() => {
+                alert('¡Código copiado correctamente!\n' + link);
+            });
+        }
+
         document.getElementById('createUserForm').addEventListener('submit', async (e) => {
             e.preventDefault();
             const btn = e.target.querySelector('button'); btn.disabled = true; btn.innerHTML = 'Creando...';
@@ -91,7 +98,6 @@
             const codigo = generarCodigoUnico();
             const puntos_base = ingresoEuros * 10000;
             
-            // FASE 2 APLICADA (Fórmula Proporcional Desacoplada)
             let saldoFinal = (opcionBono === 'sin_bono') ? puntos_base : (puntos_base * 2);
             let tiradasFinal = (opcionBono === 'sin_bono') ? Math.round(ingresoEuros * 100) : Math.round(ingresoEuros * 350);
             let checkBono = (opcionBono === 'con_bono');
@@ -105,11 +111,14 @@
             if (error) alert('Error: ' + error.message);
             else {
                 const link = `${CASINO_BASE_URL}?codigo=${codigo}`;
+                // CÓDIGO VISIBLE PERMANENTEMENTE TRAS CREAR
                 document.getElementById('alert-box').innerHTML = `
-                    <div class="bg-green-600/20 border border-green-500 p-4 rounded mb-6 flex justify-between items-center">
-                        <div><p class="text-green-400 font-bold mb-1">¡Jugador Creado!</p>
-                        <p class="text-sm font-mono text-white">${link}</p></div>
-                        <button onclick="navigator.clipboard.writeText('${link}'); alert('Copiado');" class="bg-green-600 px-4 py-2 rounded text-sm font-bold">📋 Copiar</button>
+                    <div class="bg-green-600/20 border border-green-500 p-4 rounded mb-6 flex flex-col sm:flex-row justify-between items-center gap-4">
+                        <div>
+                            <p class="text-green-400 font-bold mb-1">¡Jugador Creado!</p>
+                            <p class="text-sm text-white">Código del jugador: <span class="font-mono text-yellow-400 text-lg ml-2">[ ${codigo} ]</span></p>
+                        </div>
+                        <button onclick="copiarLink('${link}')" class="bg-green-600 hover:bg-green-500 px-4 py-2 rounded text-sm font-bold shadow transition-colors whitespace-nowrap">📋 COPIAR CÓDIGO</button>
                     </div>`;
                 e.target.reset(); fetchUsuarios();  
             }
@@ -130,22 +139,76 @@
                 const tIngresado = u.total_ingresado !== null ? parseFloat(u.total_ingresado).toLocaleString('es-ES') : '0';
                 const sFormateado = parseFloat(u.saldo).toLocaleString('es-ES');
                 const tipoTxt = u.tiene_bono ? 'BONO (x2)' : 'Normal';
+                const link = `${CASINO_BASE_URL}?codigo=${u.codigo}`;
                 
                 tr.innerHTML = `
-                    <td class="lg:py-4 px-2 lg:px-4 font-bold">${u.nombre}</td>
-                    <td class="lg:py-4 px-2 lg:px-4"><span class="font-mono text-yellow-400">${u.codigo}</span></td>
-                    <td class="lg:py-4 px-2 lg:px-4 text-green-400 font-bold">${tIngresado} €</td>
-                    <td class="lg:py-4 px-2 lg:px-4 text-blue-400 font-bold">${sFormateado} pts</td>
-                    <td class="lg:py-4 px-2 lg:px-4 text-orange-400 text-xs font-bold">${tipoTxt}</td>
-                    <td class="lg:py-4 px-2 lg:px-4 text-gray-300 text-xs">${u.tiradas_realizadas}/${u.tiradas_objetivo}
+                    <td class="lg:py-4 px-2 lg:px-4 font-bold flex lg:table-cell justify-between"><span class="lg:hidden text-xs text-gray-500 uppercase">Nombre:</span> ${u.nombre}</td>
+                    
+                    <!-- BOTÓN COPIAR SIEMPRE ACCESIBLE EN LA TABLA -->
+                    <td class="lg:py-4 px-2 lg:px-4 flex lg:table-cell justify-between items-center gap-2 mt-2 lg:mt-0">
+                        <span class="lg:hidden text-xs text-gray-500 uppercase">Código:</span>
+                        <div class="flex items-center gap-2">
+                            <span class="font-mono text-yellow-400">[ ${u.codigo} ]</span>
+                            <button onclick="copiarLink('${link}')" class="bg-gray-700 hover:bg-gray-600 text-white px-2 py-1 rounded text-xs" title="Copiar Link de Acceso">📋</button>
+                        </div>
+                    </td>
+                    
+                    <td class="lg:py-4 px-2 lg:px-4 text-green-400 font-bold flex lg:table-cell justify-between mt-2 lg:mt-0"><span class="lg:hidden text-xs text-gray-500 uppercase">Ingresado:</span> ${tIngresado} €</td>
+                    <td class="lg:py-4 px-2 lg:px-4 text-blue-400 font-bold flex lg:table-cell justify-between mt-2 lg:mt-0"><span class="lg:hidden text-xs text-gray-500 uppercase">Saldo:</span> ${sFormateado} pts</td>
+                    <td class="lg:py-4 px-2 lg:px-4 text-orange-400 text-xs font-bold flex lg:table-cell justify-between mt-2 lg:mt-0"><span class="lg:hidden text-gray-500 uppercase">Tipo:</span> ${tipoTxt}</td>
+                    
+                    <td class="lg:py-4 px-2 lg:px-4 text-gray-300 text-xs flex flex-col lg:table-cell mt-2 lg:mt-0">
+                        <div class="flex justify-between lg:block">
+                            <span class="lg:hidden text-gray-500 uppercase">Rollover:</span>
+                            <span>${u.tiradas_realizadas}/${u.tiradas_objetivo}</span>
+                        </div>
                         <div class="w-full bg-gray-800 rounded-full h-1 mt-1"><div class="bg-blue-500 h-1 rounded-full" style="width: ${Math.min((u.tiradas_realizadas/u.tiradas_objetivo)*100,100)}%"></div></div>
                     </td>
-                    <td class="lg:py-4 px-2 lg:px-4 flex flex-wrap gap-2 mt-2 lg:mt-0">
-                        <button onclick="editarNombre(${u.id}, '${u.nombre}')" class="bg-blue-600 px-2 py-1 rounded text-xs">✏️</button>
-                        <button onclick="eliminarUsuario(${u.id})" class="bg-red-600 px-2 py-1 rounded text-xs">🗑️</button>
+                    
+                    <!-- BOTONES AÑADIR/QUITAR RECUPERADOS -->
+                    <td class="lg:py-4 px-2 lg:px-4 flex flex-wrap justify-center lg:justify-start gap-2 mt-4 lg:mt-0 border-t border-gray-700 lg:border-0 pt-4 lg:pt-0">
+                        <button onclick="recargarSaldoPersonalizado(${u.id}, '${u.nombre}', ${u.saldo}, ${u.total_ingresado || 0})" title="Añadir Dinero" class="bg-green-600 hover:bg-green-500 px-3 py-1.5 rounded text-xs font-bold flex-1 lg:flex-none">💰+</button>
+                        <button onclick="restarSaldoPersonalizado(${u.id}, '${u.nombre}', ${u.saldo}, ${u.total_ingresado || 0})" title="Quitar Dinero" class="bg-orange-600 hover:bg-orange-500 px-3 py-1.5 rounded text-xs font-bold flex-1 lg:flex-none">➖-</button>
+                        <button onclick="editarNombre(${u.id}, '${u.nombre}')" title="Editar Nombre" class="bg-blue-600 hover:bg-blue-500 px-3 py-1.5 rounded text-xs flex-none">✏️</button>
+                        <button onclick="eliminarUsuario(${u.id})" title="Eliminar Jugador" class="bg-red-600 hover:bg-red-500 px-3 py-1.5 rounded text-xs flex-none">🗑️</button>
                     </td>`;
                 tbody.appendChild(tr);
             });
+        }
+
+        // FUNCIONES AÑADIR Y QUITAR RECUPERADAS INTACTAS
+        async function recargarSaldoPersonalizado(id, nombre, saldoActual, totalActual) {
+            const inputEuros = prompt(`¿Cuántos EUROS REALES quieres añadir al jugador ${nombre}?\n(Ej: 2.5)`);
+            if (inputEuros !== null && inputEuros.trim() !== '') {
+                const euros = parseFloat(inputEuros.replace(',', '.')); 
+                if (isNaN(euros) || euros <= 0) {
+                    alert('Cantidad inválida.');
+                    return;
+                }
+                const nuevoSaldo = parseFloat(saldoActual) + (euros * 10000);
+                const nuevoTotalIngresado = parseFloat(totalActual) + euros;
+
+                const { error } = await supabaseClient.from('usuarios').update({ saldo: nuevoSaldo, total_ingresado: nuevoTotalIngresado }).eq('id', id);
+                if (error) alert('Error:\n' + error.message);
+                else fetchUsuarios(); 
+            }
+        }
+
+        async function restarSaldoPersonalizado(id, nombre, saldoActual, totalActual) {
+            const inputEuros = prompt(`CORRECCIÓN: ¿Cuántos EUROS le quieres QUITAR a ${nombre}?`);
+            if (inputEuros !== null && inputEuros.trim() !== '') {
+                const eurosARestar = parseFloat(inputEuros.replace(',', '.')); 
+                if (isNaN(eurosARestar) || eurosARestar <= 0) {
+                    alert('Cantidad inválida.');
+                    return;
+                }
+                const nuevoSaldo = Math.max(0, parseFloat(saldoActual) - (eurosARestar * 10000));
+                const nuevoTotalIngresado = Math.max(0, parseFloat(totalActual) - eurosARestar);
+
+                const { error } = await supabaseClient.from('usuarios').update({ saldo: nuevoSaldo, total_ingresado: nuevoTotalIngresado }).eq('id', id);
+                if (error) alert('Error:\n' + error.message);
+                else fetchUsuarios(); 
+            }
         }
 
         async function editarNombre(id, nActual) {
