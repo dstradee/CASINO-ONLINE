@@ -3,211 +3,261 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>Mega Fire Roulette</title>
+    <title>Mega Fire Roulette | Live</title>
     
     <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🔥</text></svg>">
-    
-    <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Supabase JS v2 -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
     <style>
+        :root {
+            --red-num: #dc2626;
+            --black-num: #18181b;
+            --green-num: #16a34a;
+            --fire-glow: #f97316;
+            --fire-core: #fef08a;
+        }
+
         body {
             user-select: none; -webkit-user-select: none; -webkit-touch-callout: none;
             overscroll-behavior-y: contain;
-            background-color: #050505;
+            background-color: #09090b; /* Zinc 950 */
             color: white;
-            font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            font-family: ui-sans-serif, system-ui, -apple-system, sans-serif;
         }
 
-        /* ANCLAS MENTALES: LOS JACKPOTS */
-        .jackpot-bar {
-            background: linear-gradient(90deg, #1a0505 0%, #450a0a 50%, #1a0505 100%);
-            border-bottom: 2px solid #ef4444;
-            box-shadow: 0 5px 15px rgba(239, 68, 68, 0.2);
+        /* --- TOP JACKPOTS --- */
+        .jackpot-panel {
+            background: linear-gradient(180deg, #18181b 0%, #09090b 100%);
+            border-bottom: 1px solid #27272a;
         }
-        .text-glow { text-shadow: 0 0 10px currentColor; }
+        .jackpot-item { text-align: center; padding: 4px 0; }
+        .j-grand { text-shadow: 0 0 15px #facc15; animation: slow-pulse 2s infinite; }
 
-        /* LA RULETA FÍSICA */
-        .roulette-wrapper {
-            position: relative; width: 300px; height: 300px; margin: 0 auto;
-            border-radius: 50%; padding: 8px;
-            background: conic-gradient(#f59e0b, #78350f, #f59e0b, #78350f, #f59e0b);
-            box-shadow: 0 0 30px rgba(245, 158, 11, 0.3), inset 0 0 20px rgba(0,0,0,0.9);
+        @keyframes slow-pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.7; } }
+
+        /* --- BANNER DE FASES --- */
+        .phase-banner {
+            background: linear-gradient(90deg, transparent, rgba(220, 38, 38, 0.2), transparent);
+            border-top: 1px solid rgba(220, 38, 38, 0.5);
+            border-bottom: 1px solid rgba(220, 38, 38, 0.5);
+            text-shadow: 0 0 10px rgba(220, 38, 38, 0.8);
+            transition: all 0.3s ease;
         }
-        .roulette-wheel {
-            width: 100%; height: 100%; border-radius: 50%;
-            position: relative; overflow: hidden;
-            transition: transform 5s cubic-bezier(0.2, 0.8, 0.1, 1);
-            border: 4px solid #111;
+        .phase-fire {
+            background: linear-gradient(90deg, transparent, rgba(249, 115, 22, 0.3), transparent);
+            border-color: #f97316;
+            text-shadow: 0 0 15px #f97316;
+        }
+
+        /* --- TABLERO DE NÚMEROS (CSS GRID) --- */
+        .board-container {
+            display: grid;
+            grid-template-columns: repeat(13, 1fr);
+            grid-template-rows: repeat(3, 1fr);
+            gap: 4px;
+            padding: 10px;
+            max-width: 800px;
+            margin: 0 auto;
+            perspective: 1000px;
         }
         
-        /* Sectores CSS generados dinámicamente desde JS */
-        .slot {
-            position: absolute; top: 0; left: 50%;
-            width: 25.4px; /* Aprox ancho para 37 slots */
-            height: 50%;
-            transform-origin: 50% 100%;
-            clip-path: polygon(0 0, 100% 0, 50% 100%);
-            display: flex; justify-content: center;
+        .board-cell {
+            position: relative;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 1.2rem; font-weight: 800;
+            border-radius: 4px; border: 1px solid rgba(255,255,255,0.1);
+            cursor: pointer;
+            box-shadow: inset 0 0 10px rgba(0,0,0,0.5);
+            transition: all 0.2s ease;
+            aspect-ratio: 1;
         }
-        .slot span {
-            margin-top: 5px; font-weight: 900; font-size: 11px;
-            transform: rotate(0deg); color: white;
+        .board-cell:hover { transform: scale(1.05); z-index: 10; border-color: white; }
+        
+        /* Colores Base */
+        .cell-red { background: var(--red-num); }
+        .cell-black { background: var(--black-num); }
+        .cell-green { background: var(--green-num); grid-column: 1; grid-row: 1 / span 3; aspect-ratio: auto; }
+
+        /* Estados del Tablero */
+        .cell-selected {
+            border: 2px solid #3b82f6;
+            box-shadow: 0 0 15px rgba(59, 130, 246, 0.6), inset 0 0 10px rgba(0,0,0,0.5);
+            transform: scale(1.05); z-index: 5;
+        }
+        
+        .chip-visual {
+            position: absolute; width: 24px; height: 24px;
+            background: radial-gradient(circle, #2563eb 0%, #1e3a8a 100%);
+            border: 2px dashed #93c5fd; border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 0.5rem; font-weight: bold; color: white;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.5);
+            animation: chip-drop 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            pointer-events: none;
         }
 
-        /* FLECHA Y CENTRO */
-        .roulette-pointer {
-            position: absolute; top: -15px; left: 50%; transform: translateX(-50%);
-            width: 0; height: 0; border-left: 15px solid transparent; border-right: 15px solid transparent;
-            border-top: 30px solid #fde047; z-index: 20; filter: drop-shadow(0 4px 6px rgba(0,0,0,0.8));
+        /* --- ESTADO FIRE NUMBER --- */
+        @keyframes fire-ignite {
+            0% { box-shadow: 0 0 0px var(--fire-glow); }
+            50% { box-shadow: 0 0 20px var(--fire-glow), inset 0 0 15px var(--fire-core); border-color: var(--fire-core); }
+            100% { box-shadow: 0 0 15px var(--fire-glow); border-color: var(--fire-glow); }
         }
-        .roulette-center {
-            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
-            width: 140px; height: 140px; border-radius: 50%;
-            background: radial-gradient(circle, #27272a 0%, #000 100%);
-            border: 3px solid #f59e0b; z-index: 10;
-            display: flex; flex-direction: column; align-items: center; justify-content: center;
-            box-shadow: inset 0 0 20px rgba(0,0,0,1);
+        .cell-fire {
+            animation: fire-ignite 1s alternate infinite;
+            z-index: 4;
+        }
+        .cell-fire::after {
+            content: '🔥'; position: absolute; top: -8px; right: -8px;
+            font-size: 1rem; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.5));
+            animation: pop-in 0.3s ease;
         }
 
-        /* ESTADO FIRE NUMBER */
-        @keyframes fire-pulse {
-            0% { background-color: #ea580c; box-shadow: 0 0 10px #ea580c; }
-            50% { background-color: #facc15; box-shadow: 0 0 25px #facc15, 0 0 10px #ea580c inset; }
-            100% { background-color: #ea580c; box-shadow: 0 0 10px #ea580c; }
+        /* --- ESTADO GANADOR / RESULTADO --- */
+        .cell-winner {
+            transform: scale(1.2); z-index: 20;
+            border: 3px solid white;
+            box-shadow: 0 0 30px rgba(255,255,255,0.8);
+            animation: winner-pulse 0.5s alternate infinite;
         }
-        .is-fire {
-            animation: fire-pulse 0.8s infinite alternate !important;
-            z-index: 5;
+        .board-dimmed .board-cell:not(.cell-winner):not(.cell-fire) {
+            opacity: 0.3; filter: grayscale(50%);
         }
-        .is-fire span { color: #000 !important; font-size: 13px; text-shadow: none; }
 
-        /* RONDA DE BONUS (SLOT GRID) */
-        .bonus-screen {
-            background: radial-gradient(circle, #450a0a 0%, #000 100%);
-            z-index: 100;
+        /* --- BONUS GRID --- */
+        .bonus-overlay {
+            background: radial-gradient(circle at center, rgba(69, 10, 10, 0.95) 0%, rgba(0, 0, 0, 0.98) 100%);
+            backdrop-filter: blur(10px); z-index: 100;
         }
         .bonus-grid {
-            display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px;
-            width: 280px; margin: 0 auto;
+            display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px;
+            width: 100%; max-width: 320px; margin: 0 auto;
         }
         .bonus-cell {
-            aspect-ratio: 1; background: rgba(0,0,0,0.5); border: 2px solid #b91c1c;
-            border-radius: 10px; display: flex; align-items: center; justify-content: center;
-            font-size: 1.5rem; font-weight: 900; box-shadow: inset 0 0 15px rgba(185,28,28,0.3);
+            aspect-ratio: 1;
+            background: linear-gradient(135deg, #18181b 0%, #09090b 100%);
+            border: 2px solid #3f3f46; border-radius: 12px;
+            display: flex; align-items: center; justify-content: center;
+            box-shadow: inset 0 0 20px rgba(0,0,0,1);
             transition: all 0.3s;
         }
-        .cell-filled {
-            background: linear-gradient(135deg, #f59e0b, #ea580c); border-color: #fef08a;
-            box-shadow: 0 0 20px rgba(245, 158, 11, 0.6); color: white;
-            animation: pop-in 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+        .bonus-cell.revealed {
+            background: linear-gradient(135deg, #ea580c 0%, #9a3412 100%);
+            border-color: #fde047;
+            box-shadow: 0 0 25px rgba(234, 88, 12, 0.5), inset 0 0 15px rgba(253, 224, 71, 0.3);
+            animation: reveal-anim 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
         }
-
-        @keyframes pop-in { 0% { transform: scale(0); } 100% { transform: scale(1); } }
-        @keyframes shake { 0%, 100% { transform: translateX(0); } 25% { transform: translateX(-5px); } 75% { transform: translateX(5px); } }
         
-        .shake-active { animation: shake 0.3s ease-in-out; }
+        @keyframes reveal-anim {
+            0% { transform: scale(1); box-shadow: inset 0 0 20px rgba(0,0,0,1); }
+            50% { transform: scale(1.15); box-shadow: 0 0 40px #fde047; }
+            100% { transform: scale(1); }
+        }
+        @keyframes chip-drop { 0% { transform: scale(3) translateY(-20px); opacity: 0; } 100% { transform: scale(1) translateY(0); opacity: 1; } }
+        @keyframes pop-in { 0% { transform: scale(0); } 100% { transform: scale(1); } }
+        @keyframes winner-pulse { 100% { transform: scale(1.25); box-shadow: 0 0 40px rgba(255,255,255,1); } }
+
     </style>
 </head>
-<body class="w-screen overflow-hidden flex flex-col font-sans h-[100dvh]">
+<body class="flex flex-col h-[100dvh] w-full overflow-hidden">
 
-    <!-- PANTALLAS DE ESTADO -->
-    <div id="loading-screen" class="absolute inset-0 z-[200] bg-black flex flex-col items-center justify-center">
-        <div class="text-5xl animate-pulse mb-4">🔥</div>
-        <p class="text-orange-500 font-bold uppercase tracking-widest animate-pulse text-sm">Cargando Mesa...</p>
+    <!-- PANTALLAS DE SISTEMA -->
+    <div id="sys-loading" class="absolute inset-0 z-[200] bg-zinc-950 flex flex-col items-center justify-center">
+        <div class="text-4xl animate-bounce mb-2">🎲</div>
+        <p class="text-zinc-500 font-bold uppercase tracking-widest text-xs animate-pulse">Conectando Mesa...</p>
     </div>
-    <div id="error-screen" class="absolute inset-0 z-[200] bg-black flex flex-col items-center justify-center hidden">
-        <h1 class="text-red-600 text-4xl font-extrabold mb-2 uppercase">Denegado</h1>
+    <div id="sys-error" class="absolute inset-0 z-[200] bg-zinc-950 flex flex-col items-center justify-center hidden">
+        <h1 class="text-red-600 text-3xl font-black uppercase">Acceso Denegado</h1>
     </div>
 
-    <!-- PANTALLA DE BONUS (Oculta por defecto) -->
-    <div id="bonus-screen" class="absolute inset-0 bonus-screen hidden flex-col items-center justify-center">
-        <h2 class="text-4xl font-black text-transparent bg-clip-text bg-gradient-to-r from-yellow-400 to-red-500 mb-2 uppercase text-center leading-none drop-shadow-[0_0_10px_rgba(239,68,68,0.8)]">
-            Mega Fire<br>Bonus
-        </h2>
-        
+    <!-- PANTALLA DE BONUS (Capa interactiva) -->
+    <div id="bonus-screen" class="absolute inset-0 bonus-overlay hidden flex-col items-center justify-center px-4">
         <div class="text-center mb-6">
-            <span class="text-sm text-red-300 font-bold uppercase">Spins Restantes</span>
-            <div id="bonus-spins" class="text-5xl font-black text-white">3</div>
+            <h2 class="text-5xl font-black text-transparent bg-clip-text bg-gradient-to-r from-yellow-400 via-orange-500 to-red-500 uppercase drop-shadow-lg filter drop-shadow-[0_0_10px_rgba(249,115,22,0.5)]">
+                Mega Fire
+            </h2>
+            <p class="text-orange-200 font-bold tracking-[0.2em] uppercase text-sm mt-1">Bonus Game</p>
+        </div>
+        
+        <div class="flex justify-between w-full max-w-[320px] mb-4 px-2">
+            <div class="flex flex-col items-start">
+                <span class="text-[10px] text-zinc-400 uppercase font-bold">Apuesta Base</span>
+                <span id="bonus-base-bet" class="text-lg font-black text-white">100</span>
+            </div>
+            <div class="flex flex-col items-end">
+                <span class="text-[10px] text-red-400 uppercase font-bold">Spins</span>
+                <span id="bonus-spins" class="text-2xl font-black text-white">3</span>
+            </div>
         </div>
 
         <div class="bonus-grid" id="bonus-grid">
-            <!-- 9 celdas generadas en JS -->
+            <!-- 9 celdas generadas JS -->
         </div>
 
-        <div id="bonus-total-container" class="mt-8 text-center hidden flex-col items-center" style="animation: pop-in 0.5s forwards;">
-            <span class="text-sm text-yellow-500 font-bold uppercase">Premio Total</span>
-            <span id="bonus-total-win" class="text-6xl font-black text-white text-glow text-green-400">0</span>
-            <button onclick="closeBonus()" class="mt-6 px-8 py-3 bg-green-600 font-black text-white rounded-full uppercase shadow-[0_0_20px_#16a34a]">Recoger</button>
-        </div>
-    </div>
-
-    <!-- APP PRINCIPAL -->
-    <div id="app-screen" class="flex-1 flex flex-col relative hidden bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-zinc-900 via-black to-black">
-        
-        <!-- JERARQUÍA DE JACKPOTS (Dopamina estática) -->
-        <div class="jackpot-bar flex justify-between px-2 py-1 flex-none z-10">
-            <div class="text-center"><div class="text-[8px] text-green-400 font-bold uppercase">Mini</div><div class="text-xs font-black text-white">x2</div></div>
-            <div class="text-center"><div class="text-[8px] text-blue-400 font-bold uppercase">Minor</div><div class="text-xs font-black text-white">x5</div></div>
-            <div class="text-center"><div class="text-[8px] text-purple-400 font-bold uppercase">Major</div><div class="text-xs font-black text-white">x20</div></div>
-            <div class="text-center"><div class="text-[8px] text-red-500 font-bold uppercase text-glow">Grand</div><div class="text-sm font-black text-yellow-400 text-glow">x100</div></div>
-        </div>
-
-        <!-- HEADER JUGADOR -->
-        <header class="px-4 py-2 border-b border-zinc-800 bg-black/80 flex-none flex justify-between items-center">
-            <div>
-                <span class="text-[10px] text-zinc-500 uppercase font-bold tracking-wider">Jugador</span>
-                <div id="player-name" class="text-sm font-bold text-zinc-300">...</div>
-            </div>
-            <div class="text-right">
-                <span class="text-[10px] text-zinc-500 uppercase font-bold tracking-wider">Saldo</span>
-                <div id="player-balance" class="text-xl font-black text-white">0</div>
-            </div>
-        </header>
-
-        <!-- ZONA RULETA -->
-        <main class="flex-1 flex flex-col items-center justify-center relative overflow-hidden w-full">
-            
-            <div class="roulette-wrapper shrink-0">
-                <div class="roulette-pointer"></div>
-                
-                <!-- Rueda generada por JS -->
-                <div id="wheel" class="roulette-wheel"></div>
-                
-                <div class="roulette-center">
-                    <span class="text-[10px] text-zinc-400 font-bold uppercase mb-1">Apuesta</span>
-                    <span id="center-bet" class="text-2xl font-black text-white">100</span>
-                    <span id="fire-status" class="text-xs font-bold text-orange-500 uppercase mt-1 animate-pulse hidden">🔥 Fire 🔥</span>
-                </div>
-            </div>
-
-            <!-- MENSAJES DE ESTADO (Casi, Ganaste, etc) -->
-            <div id="status-message" class="absolute bottom-4 left-0 w-full text-center h-12 flex items-center justify-center">
-                <!-- Inyectado por JS -->
-            </div>
-
-        </main>
-
-        <!-- CONTROLES FIJOS -->
-        <div class="bg-zinc-950 border-t border-zinc-800 px-4 pt-3 pb-8 flex-none z-20">
-            <div class="flex justify-between gap-2 mb-3">
-                <button onclick="setBet(100)" class="bet-btn bet-active flex-1 py-2 bg-zinc-900 border border-zinc-700 rounded text-zinc-300 font-bold transition-all text-sm">100</button>
-                <button onclick="setBet(250)" class="bet-btn flex-1 py-2 bg-zinc-900 border border-zinc-700 rounded text-zinc-300 font-bold transition-all text-sm">250</button>
-                <button onclick="setBet(500)" class="bet-btn flex-1 py-2 bg-zinc-900 border border-zinc-700 rounded text-zinc-300 font-bold transition-all text-sm">500</button>
-                <button onclick="setBet(1000)" class="bet-btn flex-1 py-2 bg-zinc-900 border border-zinc-700 rounded text-zinc-300 font-bold transition-all text-sm">1K</button>
-            </div>
-            
-            <button id="spin-btn" class="w-full h-16 bg-gradient-to-r from-red-600 to-red-700 active:from-red-800 active:to-red-900 rounded-lg shadow-[0_5px_0_#7f1d1d] active:shadow-[0_0px_0_#7f1d1d] active:translate-y-[5px] transition-all flex items-center justify-center disabled:opacity-50 disabled:grayscale">
-                <span class="text-2xl font-black text-white tracking-widest uppercase">Girar Ruleta</span>
+        <div id="bonus-result" class="mt-8 text-center hidden flex-col items-center" style="animation: pop-in 0.5s forwards;">
+            <span class="text-xs text-yellow-500 font-bold uppercase tracking-widest">Premio Total Obtenido</span>
+            <span id="bonus-total-win" class="text-6xl font-black text-green-400 drop-shadow-[0_0_15px_rgba(74,222,128,0.5)]">0</span>
+            <button onclick="endRound()" class="mt-6 px-10 py-3 bg-gradient-to-b from-green-500 to-green-700 font-black text-white rounded shadow-lg uppercase text-sm border border-green-400 hover:scale-105 transition-transform">
+                Continuar
             </button>
         </div>
     </div>
 
-    <!-- JAVASCRIPT -->
+    <!-- MAIN APP: Header Jackpots -->
+    <div class="jackpot-panel flex justify-between px-3 py-1 flex-none z-10">
+        <div class="jackpot-item"><div class="text-[9px] text-green-400 font-bold uppercase tracking-wider">Mini</div><div class="text-sm font-black">x2</div></div>
+        <div class="jackpot-item"><div class="text-[9px] text-blue-400 font-bold uppercase tracking-wider">Minor</div><div class="text-sm font-black">x5</div></div>
+        <div class="jackpot-item"><div class="text-[9px] text-purple-400 font-bold uppercase tracking-wider">Major</div><div class="text-sm font-black">x20</div></div>
+        <div class="jackpot-item"><div class="text-[9px] text-red-500 font-bold uppercase tracking-wider">Grand</div><div class="text-base font-black text-yellow-400 j-grand">x100</div></div>
+    </div>
+
+    <!-- HEADER JUGADOR -->
+    <header class="px-4 py-2 bg-zinc-900/80 flex-none flex justify-between items-center border-b border-zinc-800">
+        <div>
+            <span class="text-[9px] text-zinc-500 uppercase font-bold tracking-widest">Jugador</span>
+            <div id="player-name" class="text-xs font-bold text-zinc-200">...</div>
+        </div>
+        <div class="text-right">
+            <span class="text-[9px] text-zinc-500 uppercase font-bold tracking-widest">Saldo</span>
+            <div id="player-balance" class="text-lg font-black text-white">0</div>
+        </div>
+    </header>
+
+    <!-- STATUS BANNER -->
+    <div id="phase-banner" class="phase-banner flex-none py-2 text-center">
+        <span id="phase-text" class="text-sm font-black uppercase tracking-[0.2em] text-white">Apuestas Abiertas</span>
+    </div>
+
+    <!-- ZONA CENTRAL: EL TABLERO -->
+    <main class="flex-1 flex flex-col justify-center overflow-y-auto w-full relative">
+        <div id="board-container" class="board-container w-full">
+            <!-- Números inyectados por JS -->
+        </div>
+    </main>
+
+    <!-- CONTROLES INFERIORES -->
+    <div class="bg-zinc-950 border-t border-zinc-800 px-4 pt-3 pb-6 flex-none z-20">
+        
+        <div class="flex justify-between items-center mb-3">
+            <span class="text-[10px] text-zinc-500 uppercase font-bold">Valor Apuesta</span>
+            <span id="current-bet-display" class="text-sm font-black text-white">100</span>
+        </div>
+
+        <div class="flex justify-between gap-2 mb-4">
+            <button onclick="setBetValue(100)" class="bet-btn flex-1 py-2 bg-zinc-800 border-2 border-blue-500 rounded text-white font-bold text-sm shadow-[0_0_10px_rgba(59,130,246,0.3)] transition-all">100</button>
+            <button onclick="setBetValue(250)" class="bet-btn flex-1 py-2 bg-zinc-900 border-2 border-zinc-700 rounded text-zinc-400 font-bold text-sm transition-all">250</button>
+            <button onclick="setBetValue(500)" class="bet-btn flex-1 py-2 bg-zinc-900 border-2 border-zinc-700 rounded text-zinc-400 font-bold text-sm transition-all">500</button>
+            <button onclick="setBetValue(1000)" class="bet-btn flex-1 py-2 bg-zinc-900 border-2 border-zinc-700 rounded text-zinc-400 font-bold text-sm transition-all">1K</button>
+        </div>
+        
+        <button id="spin-btn" class="w-full h-14 bg-zinc-800 rounded font-black text-zinc-500 uppercase tracking-widest transition-all border border-zinc-700 flex items-center justify-center gap-2" disabled>
+            <span>Selecciona un número</span>
+        </button>
+    </div>
+
+    <!-- SCRIPTS -->
     <script>
-        // --- 1. CONFIGURACIÓN Y SUPABASE ---
+        // --- 1. CONFIGURACIÓN Y SUPABASE (INTOCABLE) ---
         const { createClient } = supabase;
         const supabaseUrl = 'https://qutkwzjchchhbqfhtaxi.supabase.co';
         const supabaseKey = 'sb_publishable_fv4VSDx-LJrkorzY0bOKaA_0poFJcU1';
@@ -215,62 +265,126 @@
 
         // Variables Globales
         let currentUser = null;
-        let isSpinning = false;
+        let gameState = 'BETTING_OPEN'; // BETTING_OPEN, CLOSED, REVEAL, RESULT, BONUS
         let currentBet = 100;
-        let currentRotation = 0; 
+        let selectedNumber = null;
+        let finalPrizeAmount = 0;
         
-        // Estructura Ruleta Europea
-        const ROULETTE_NUMS = [0,32,15,19,4,21,2,25,17,34,6,27,13,36,11,30,8,23,10,5,24,16,33,1,20,14,31,9,22,18,29,7,28,12,35,3,26];
-        const SEGMENT_DEG = 360 / 37; // 9.729 grados
+        // Estructura Ruleta
+        const NUMBERS = Array.from({length: 37}, (_, i) => i);
+        const RED_NUMS = [1,3,5,7,9,12,14,16,18,19,21,23,25,27,30,32,34,36];
         
+        // Elementos DOM
+        const elBoard = document.getElementById('board-container');
+        const elBanner = document.getElementById('phase-banner');
+        const elBannerText = document.getElementById('phase-text');
+        const elSpinBtn = document.getElementById('spin-btn');
+
         // --- 2. INICIALIZACIÓN ---
         document.addEventListener('DOMContentLoaded', async () => {
-            renderWheel();
+            renderBoard();
+            
             const urlParams = new URLSearchParams(window.location.search);
             const codigoUrl = urlParams.get('codigo');
-            if (!codigoUrl) return document.getElementById('error-screen').classList.remove('hidden');
+            if (!codigoUrl) return document.getElementById('sys-error').classList.remove('hidden');
 
             const { data, error } = await supabaseClient.from('usuarios').select('*').eq('codigo', codigoUrl).single();
             if (error || !data) {
-                document.getElementById('loading-screen').classList.add('hidden');
-                document.getElementById('error-screen').classList.remove('hidden');
+                document.getElementById('sys-loading').classList.add('hidden');
+                document.getElementById('sys-error').classList.remove('hidden');
             } else {
                 currentUser = data;
-                document.getElementById('loading-screen').classList.add('hidden');
-                document.getElementById('app-screen').classList.remove('hidden');
+                document.getElementById('sys-loading').classList.add('hidden');
                 updateUI();
             }
         });
 
-        // --- 3. DIBUJAR RULETA (CSS Dinámico) ---
-        function renderWheel() {
-            const wheel = document.getElementById('wheel');
-            wheel.innerHTML = '';
-            ROULETTE_NUMS.forEach((num, index) => {
-                let color = (num === 0) ? '#16a34a' : (index % 2 === 0 ? '#171717' : '#dc2626');
-                const slot = document.createElement('div');
-                slot.className = 'slot';
-                slot.id = `slot-${num}`;
-                // Rotar el sector y darle color de fondo con bordes
-                slot.style.transform = `rotate(${index * SEGMENT_DEG}deg)`;
-                slot.style.background = color;
+        // --- 3. DIBUJAR EL TABLERO (UX/UI Nueva) ---
+        function renderBoard() {
+            elBoard.innerHTML = '';
+            
+            // Render 0 (ocupa 3 filas)
+            const cell0 = document.createElement('div');
+            cell0.className = 'board-cell cell-green';
+            cell0.id = 'cell-0';
+            cell0.innerHTML = `<span>0</span>`;
+            cell0.onclick = () => handleCellClick(0);
+            elBoard.appendChild(cell0);
+
+            // Render 1-36 ordenados en 3 filas y 12 columnas
+            for (let num = 1; num <= 36; num++) {
+                const col = Math.ceil(num / 3) + 1; // +1 porque la col 1 es del 0
+                const row = 3 - ((num - 1) % 3);
                 
-                const span = document.createElement('span');
-                span.innerText = num;
-                slot.appendChild(span);
-                wheel.appendChild(slot);
-            });
+                const isRed = RED_NUMS.includes(num);
+                const cell = document.createElement('div');
+                cell.className = `board-cell ${isRed ? 'cell-red' : 'cell-black'}`;
+                cell.id = `cell-${num}`;
+                cell.style.gridColumn = col;
+                cell.style.gridRow = row;
+                cell.innerHTML = `<span>${num}</span>`;
+                cell.onclick = () => handleCellClick(num);
+                
+                elBoard.appendChild(cell);
+            }
         }
 
-        // --- 4. UI Y APUESTAS ---
-        function setBet(amount) {
-            if (isSpinning) return;
+        // --- 4. INTERACCIONES FASE APUESTAS ---
+        function setBetValue(amount) {
+            if (gameState !== 'BETTING_OPEN') return;
             currentBet = amount;
+            document.getElementById('current-bet-display').innerText = amount;
+            
             document.querySelectorAll('.bet-btn').forEach(btn => {
-                btn.style.borderColor = parseInt(btn.innerText.replace('1K', '1000')) === amount ? '#ef4444' : '#3f3f46';
-                btn.style.background = parseInt(btn.innerText.replace('1K', '1000')) === amount ? '#7f1d1d' : '#18181b';
+                const val = parseInt(btn.innerText.replace('1K', '1000'));
+                if (val === amount) {
+                    btn.classList.replace('bg-zinc-900', 'bg-zinc-800');
+                    btn.classList.replace('border-zinc-700', 'border-blue-500');
+                    btn.classList.replace('text-zinc-400', 'text-white');
+                    btn.style.boxShadow = '0 0 10px rgba(59,130,246,0.3)';
+                } else {
+                    btn.classList.replace('bg-zinc-800', 'bg-zinc-900');
+                    btn.classList.replace('border-blue-500', 'border-zinc-700');
+                    btn.classList.replace('text-white', 'text-zinc-400');
+                    btn.style.boxShadow = 'none';
+                }
             });
-            document.getElementById('center-bet').innerText = amount;
+
+            // Actualizar chip visual si ya hay número seleccionado
+            if (selectedNumber !== null) renderChip();
+        }
+
+        function handleCellClick(num) {
+            if (gameState !== 'BETTING_OPEN') return;
+            
+            // Limpiar anterior
+            if (selectedNumber !== null) {
+                document.getElementById(`cell-${selectedNumber}`).classList.remove('cell-selected');
+                const oldChip = document.getElementById('active-chip');
+                if (oldChip) oldChip.remove();
+            }
+
+            selectedNumber = num;
+            document.getElementById(`cell-${num}`).classList.add('cell-selected');
+            renderChip();
+            
+            // Activar botón
+            elSpinBtn.disabled = false;
+            elSpinBtn.className = 'w-full h-14 bg-gradient-to-r from-red-600 to-red-800 rounded font-black text-white uppercase tracking-widest transition-all shadow-[0_4px_0_#7f1d1d] active:shadow-[0_0px_0_#7f1d1d] active:translate-y-[4px] border border-red-500 flex items-center justify-center gap-2';
+            elSpinBtn.innerHTML = `<span>Apuestas Cerradas -> Girar</span>`;
+        }
+
+        function renderChip() {
+            const cell = document.getElementById(`cell-${selectedNumber}`);
+            const chip = document.createElement('div');
+            chip.id = 'active-chip';
+            chip.className = 'chip-visual';
+            
+            let valTxt = currentBet;
+            if(currentBet >= 1000) valTxt = (currentBet/1000)+'K';
+            
+            chip.innerText = valTxt;
+            cell.appendChild(chip);
         }
 
         function updateUI() {
@@ -278,7 +392,18 @@
             document.getElementById('player-balance').innerText = parseFloat(currentUser.saldo).toLocaleString('es-ES');
         }
 
-        // --- 5. LÓGICA MATEMÁTICA INTACTA ---
+        function setBanner(text, type = 'normal') {
+            elBannerText.innerText = text;
+            if(type === 'fire') {
+                elBanner.classList.add('phase-fire');
+                elBannerText.classList.add('text-orange-400');
+            } else {
+                elBanner.classList.remove('phase-fire');
+                elBannerText.classList.remove('text-orange-400');
+            }
+        }
+
+        // --- 5. LÓGICA MATEMÁTICA INTACTA (INTOCABLE) ---
         function getResultadoTirada(tiradas) {
             const rand = Math.random();
             let mult = 0; let tipo = '';
@@ -296,108 +421,139 @@
             return { mult, tipo };
         }
 
-        // --- 6. EL MOTOR DE LA RULETA FIRE ---
-        document.getElementById('spin-btn').addEventListener('click', () => {
-            if (isSpinning) return;
+        // --- 6. EL MOTOR DE LA EXPERIENCIA VISUAL ---
+        elSpinBtn.addEventListener('click', async () => {
+            if (gameState !== 'BETTING_OPEN' || selectedNumber === null) return;
             if (currentUser.saldo < currentBet) return alert('Saldo insuficiente.');
 
-            isSpinning = true;
-            document.getElementById('spin-btn').disabled = true;
-            document.getElementById('status-message').innerHTML = '';
+            // Bloquear Estado
+            gameState = 'CLOSED';
+            elSpinBtn.disabled = true;
+            elSpinBtn.classList.replace('from-red-600', 'from-zinc-700');
+            elSpinBtn.classList.replace('to-red-800', 'to-zinc-900');
+            elSpinBtn.innerHTML = `<span>Girando...</span>`;
+            
+            setBanner('Apuestas Cerradas');
 
-            // 1. Cobrar Inmediato
+            // Actualizar Saldo Inmediato (Intacto)
             currentUser.saldo -= currentBet;
             currentUser.tiradas_realizadas += 1;
             updateUI();
 
-            // 2. Elegir 5 Fire Numbers Aleatorios
-            document.querySelectorAll('.slot').forEach(el => el.classList.remove('is-fire'));
-            const shuffled = [...ROULETTE_NUMS].sort(() => 0.5 - Math.random());
-            const fireNumbers = shuffled.slice(0, 5);
-            fireNumbers.forEach(n => document.getElementById(`slot-${n}`).classList.add('is-fire'));
-
-            document.getElementById('fire-status').classList.remove('hidden');
-
-            // 3. Resultado Matemático
+            // Ejecutar Lógica Intacta
             const { mult, tipo } = getResultadoTirada(currentUser.tiradas_realizadas);
             
-            // 4. Determinar en qué casilla visual cae
-            let targetNumber;
+            // Traducir matemática a la UX del Tablero
+            let fireNumbers = [];
+            let resultNumber = null;
+
+            // Si hay premio, el número que eligió el usuario TIENE que ser Fire y TIENE que ser el resultado.
             if (mult > 0) {
-                // SI GANA (x0.3, x1.2 o x5): Tiene que caer OBLIGATORIAMENTE en un Fire Number.
-                targetNumber = fireNumbers[Math.floor(Math.random() * fireNumbers.length)];
-            } else {
-                // SI PIERDE (x0):
-                // CASI-ACIERTO (Near Miss): 40% de probabilidad de caer EXACTAMENTE AL LADO de un Fire Number.
-                if (Math.random() < 0.40) {
-                    const fireAnchor = fireNumbers[0];
-                    const idx = ROULETTE_NUMS.indexOf(fireAnchor);
-                    // Coge el de la derecha o izquierda
-                    targetNumber = ROULETTE_NUMS[(idx + (Math.random() < 0.5 ? 1 : -1) + 37) % 37];
-                    // Si por casualidad ese también es Fire, cogemos uno aleatorio normal
-                    if (fireNumbers.includes(targetNumber)) {
-                        targetNumber = shuffled.find(n => !fireNumbers.includes(n));
-                    }
-                } else {
-                    targetNumber = shuffled.find(n => !fireNumbers.includes(n));
+                resultNumber = selectedNumber;
+                fireNumbers.push(selectedNumber);
+                // Rellenar con otros 4 fires aleatorios
+                while(fireNumbers.length < 5) {
+                    let r = Math.floor(Math.random() * 37);
+                    if(!fireNumbers.includes(r)) fireNumbers.push(r);
                 }
+            } 
+            // Si NO hay premio, el número elegido NO puede ser el resultado. Puede ser Fire o no.
+            else {
+                // Generar 5 fires aleatorios
+                while(fireNumbers.length < 5) {
+                    let r = Math.floor(Math.random() * 37);
+                    if(!fireNumbers.includes(r)) fireNumbers.push(r);
+                }
+                // Elegir resultado aleatorio que NO sea el del usuario.
+                do {
+                    resultNumber = Math.floor(Math.random() * 37);
+                } while (resultNumber === selectedNumber);
             }
 
-            // 5. Girar la Ruleta
-            const targetIndex = ROULETTE_NUMS.indexOf(targetNumber);
-            // El ángulo al que hay que ir. Se le resta a 360 porque CSS gira horario y queremos que quede bajo la flecha superior.
-            const angleToTarget = 360 - (targetIndex * SEGMENT_DEG); 
-            // Añadir vueltas extra (3600 = 10 vueltas)
-            const spinAmount = 3600 + angleToTarget;
-            currentRotation += spinAmount - (currentRotation % 360);
+            // --- ANIMACIÓN: FASE REVEAL FIRE NUMBERS ---
+            await new Promise(r => setTimeout(r, 1000));
+            setBanner('Revelando Fire Numbers', 'fire');
             
-            document.getElementById('wheel').style.transform = `rotate(${currentRotation}deg)`;
-            if (navigator.vibrate) navigator.vibrate(50);
+            for (let i = 0; i < fireNumbers.length; i++) {
+                const cell = document.getElementById(`cell-${fireNumbers[i]}`);
+                cell.classList.add('cell-fire');
+                if (navigator.vibrate) navigator.vibrate(20);
+                await new Promise(r => setTimeout(r, 400));
+            }
 
-            // 6. Al detenerse (5 segundos)
-            setTimeout(() => {
-                document.getElementById('fire-status').classList.add('hidden');
+            // --- ANIMACIÓN: SPIN / BUSCANDO RESULTADO ---
+            setBanner('Buscando Número...');
+            let currentJump = 0;
+            let speed = 50;
+            let lastCell = null;
+
+            // Simulación de la bola saltando por el tablero
+            const jumpInterval = setInterval(() => {
+                if(lastCell) lastCell.style.opacity = '1';
                 
-                if (mult > 0) {
-                    // Cae en Fuego -> BONUS
-                    startBonusRound(mult, currentBet * mult, tipo);
-                } else {
-                    // Pierde -> Verificar si fue Near Miss visualmente
-                    const targetIdx = ROULETTE_NUMS.indexOf(targetNumber);
-                    const isNearMiss = fireNumbers.includes(ROULETTE_NUMS[(targetIdx + 1) % 37]) || fireNumbers.includes(ROULETTE_NUMS[(targetIdx - 1 + 37) % 37]);
-                    
-                    if (isNearMiss) {
-                        document.getElementById('status-message').innerHTML = `<span class="text-xl font-bold text-zinc-400">¡Uff... Casi!</span>`;
-                    }
-                    
-                    finalizeSpin();
+                const randomNum = Math.floor(Math.random() * 37);
+                const cell = document.getElementById(`cell-${randomNum}`);
+                cell.style.opacity = '0.5';
+                lastCell = cell;
+
+                currentJump++;
+                if (currentJump > 30) {
+                    clearInterval(jumpInterval);
+                    if(lastCell) lastCell.style.opacity = '1';
+                    showResultPhase(resultNumber, mult, tipo, fireNumbers);
                 }
-            }, 5200);
+            }, speed);
         });
 
-        // --- 7. LA RONDA DE BONUS (El truco psicológico) ---
-        let finalPrizeAmount = 0;
-        
-        function startBonusRound(mult, totalPrize, tipo) {
-            finalPrizeAmount = totalPrize;
+        // --- 7. FASE RESULTADO Y BONUS ---
+        async function showResultPhase(resultNumber, mult, tipo, fireNumbers) {
+            gameState = 'RESULT';
+            
+            // Atenuar todo menos el resultado
+            elBoard.classList.add('board-dimmed');
+            const winnerCell = document.getElementById(`cell-${resultNumber}`);
+            winnerCell.classList.add('cell-winner');
+            
+            if (navigator.vibrate) navigator.vibrate([100, 50, 100]);
+
+            if (mult > 0) {
+                // FUEGO! TRANSICIÓN A BONUS
+                setBanner(`¡FIRE NUMBER ${resultNumber}!`, 'fire');
+                await new Promise(r => setTimeout(r, 2000));
+                startBonusRound(mult, tipo);
+            } else {
+                // PÉRDIDA NORMAL
+                setBanner(`Resultado: ${resultNumber}`);
+                if (fireNumbers.includes(resultNumber)) {
+                    // Cae en fuego, pero no era nuestro número (Opcional visual)
+                }
+                await new Promise(r => setTimeout(r, 2000));
+                endRound();
+            }
+        }
+
+        // --- 8. LA RONDA DE BONUS (VISUAL) ---
+        function startBonusRound(mult, tipo) {
+            gameState = 'BONUS';
+            finalPrizeAmount = currentBet * mult; // Matemática intacta
+            
+            document.getElementById('bonus-base-bet').innerText = currentBet;
+            document.getElementById('bonus-total-win').innerText = "0";
+            document.getElementById('bonus-result').classList.add('hidden');
+            
             const grid = document.getElementById('bonus-grid');
             grid.innerHTML = '';
-            for(let i=0; i<9; i++) grid.innerHTML += `<div class="bonus-cell" id="cell-${i}"></div>`;
+            for(let i=0; i<9; i++) grid.innerHTML += `<div class="bonus-cell" id="bcell-${i}"></div>`;
             
-            document.getElementById('bonus-total-container').classList.add('hidden');
             document.getElementById('bonus-spins').innerText = '3';
             document.getElementById('bonus-screen').classList.remove('hidden');
             document.getElementById('bonus-screen').classList.add('flex');
 
-            // Determinar qué cae según el premio (Fragmentación del premio)
+            // Drops visuales en base al premio matemático
             let drops = [];
-            if (tipo === 'false-win') { // x0.3
-                drops = [ {val: `x0.3`, class: 'text-white'} ];
-            } else if (tipo === 'win-normal') { // x1.2
-                drops = [ {val: 'x0.5', class: ''}, {val: 'x0.5', class: ''}, {val: 'x0.2', class: ''} ];
-            } else if (tipo === 'win-mega') { // x5
-                drops = [ {val: 'x1', class: ''}, {val: 'x2', class: ''}, {val: 'MINI', class: 'text-green-400 text-sm'} ];
-            }
+            if (tipo === 'false-win') drops = [ {val: `x0.3`, class: 'text-white text-3xl'} ];
+            else if (tipo === 'win-normal') drops = [ {val: 'x1', class: 'text-white text-3xl'}, {val: 'x0.2', class: 'text-white text-2xl'} ];
+            else if (tipo === 'win-mega') drops = [ {val: 'x2', class: 'text-white text-3xl'}, {val: 'x1', class: 'text-white text-2xl'}, {val: 'MINI', class: 'text-green-400 text-3xl drop-shadow-[0_0_10px_#4ade80]'} ];
 
             let spinCount = 3;
             let dropIndex = 0;
@@ -407,18 +563,14 @@
                 spinCount--;
                 document.getElementById('bonus-spins').innerText = spinCount;
                 if (navigator.vibrate) navigator.vibrate(30);
-                
-                // Efecto Shake en la UI
-                document.getElementById('bonus-screen').classList.add('shake-active');
-                setTimeout(() => document.getElementById('bonus-screen').classList.remove('shake-active'), 300);
 
                 if (dropIndex < drops.length && spinCount > 0) {
-                    // Cae un premio, el contador se "reinicia" (ilusión)
-                    const cell = document.getElementById(`cell-${availableCells[dropIndex]}`);
-                    cell.classList.add('cell-filled');
-                    cell.innerHTML = `<span class="${drops[dropIndex].class}">${drops[dropIndex].val}</span>`;
+                    const cell = document.getElementById(`bcell-${availableCells[dropIndex]}`);
+                    cell.classList.add('revealed');
+                    cell.innerHTML = `<span class="font-black ${drops[dropIndex].class}">${drops[dropIndex].val}</span>`;
+                    
                     dropIndex++;
-                    spinCount = 3; // Respin mechanic
+                    spinCount = 3; // Respin ilusión
                     document.getElementById('bonus-spins').innerText = spinCount;
                     if (navigator.vibrate) navigator.vibrate([50, 50, 100]);
                 }
@@ -426,31 +578,49 @@
                 if (spinCount <= 0 || dropIndex >= drops.length) {
                     clearInterval(interval);
                     setTimeout(() => {
-                        document.getElementById('bonus-total-win').innerText = totalPrize.toLocaleString();
-                        document.getElementById('bonus-total-container').classList.remove('hidden');
-                        document.getElementById('bonus-total-container').classList.add('flex');
+                        document.getElementById('bonus-total-win').innerText = finalPrizeAmount.toLocaleString();
+                        document.getElementById('bonus-total-result').innerText = `¡GANAS ${finalPrizeAmount}!`;
+                        document.getElementById('bonus-result').classList.remove('hidden');
+                        document.getElementById('bonus-result').classList.add('flex');
                         if (navigator.vibrate) navigator.vibrate([100, 50, 100, 50, 200]);
                     }, 1000);
                 }
-            }, 1200);
+            }, 1000);
         }
 
-        async function closeBonus() {
+        // --- 9. FINALIZAR RONDA Y GUARDAR (INTOCABLE) ---
+        async function endRound() {
+            // Sumar premio
+            currentUser.saldo += finalPrizeAmount;
+            finalPrizeAmount = 0;
+            updateUI();
+
+            // Guardar en Supabase (Lógica intacta)
+            await supabaseClient.from('usuarios').update({ 
+                saldo: currentUser.saldo, 
+                tiradas_realizadas: currentUser.tiradas_realizadas 
+            }).eq('id', currentUser.id);
+
+            // Reset UI
             document.getElementById('bonus-screen').classList.add('hidden');
             document.getElementById('bonus-screen').classList.remove('flex');
             
-            currentUser.saldo += finalPrizeAmount;
-            updateUI();
-            finalizeSpin();
-        }
+            elBoard.classList.remove('board-dimmed');
+            document.querySelectorAll('.board-cell').forEach(c => {
+                c.classList.remove('cell-fire', 'cell-winner', 'cell-selected');
+                c.style.opacity = '1';
+                c.style.filter = 'none';
+            });
+            const oldChip = document.getElementById('active-chip');
+            if(oldChip) oldChip.remove();
+            selectedNumber = null;
 
-        async function finalizeSpin() {
-            isSpinning = false;
-            document.getElementById('spin-btn').disabled = false;
+            setBanner('Apuestas Abiertas');
+            gameState = 'BETTING_OPEN';
             
-            await supabaseClient.from('usuarios').update({ 
-                saldo: currentUser.saldo, tiradas_realizadas: currentUser.tiradas_realizadas 
-            }).eq('id', currentUser.id);
+            elSpinBtn.disabled = true;
+            elSpinBtn.className = 'w-full h-14 bg-zinc-800 rounded font-black text-zinc-500 uppercase tracking-widest transition-all border border-zinc-700 flex items-center justify-center gap-2';
+            elSpinBtn.innerHTML = `<span>Selecciona un número</span>`;
         }
     </script>
 </body>
