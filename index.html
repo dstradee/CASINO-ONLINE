@@ -3,14 +3,16 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>Mega Fire Casino</title>
+    <title>Spin Vía Casino</title>
     
     <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🔥</text></svg>">
     
-    <!-- Tailwind CSS -->
-    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FUENTE OFICIAL SPIN VÍA: Montserrat (Premium, legible, números perfectos para Gaming) -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;800;900&display=swap" rel="stylesheet">
     
-    <!-- Supabase e Integraciones (INTOCABLES) -->
+    <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
 
@@ -21,12 +23,13 @@
             --safe-bottom: env(safe-area-inset-bottom, 12px);
         }
 
+        /* TIPOGRAFÍA OFICIAL APLICADA GLOBALMENTE */
         body, html {
             margin: 0; padding: 0; width: 100vw; height: 100dvh;
             user-select: none; -webkit-user-select: none; -webkit-touch-callout: none;
             overflow: hidden; display: flex; flex-direction: column;
             background-color: #050505; color: white;
-            font-family: ui-sans-serif, system-ui, -apple-system, sans-serif;
+            font-family: 'Montserrat', sans-serif;
         }
 
         #toast-msg {
@@ -37,12 +40,11 @@
             opacity: 0; pointer-events: none; transition: opacity 0.3s ease;
         }
 
-        /* --- VISTAS DINÁMICAS --- */
         .view-section { display: none; flex-direction: column; height: 100%; width: 100%; animation: fade-in 0.3s ease; }
         .view-section.active { display: flex; }
         @keyframes fade-in { 0% { opacity: 0; } 100% { opacity: 1; } }
 
-        /* --- HUB & PROFILE STYLES --- */
+        /* --- VISTA 1: HUB SPIN VÍA --- */
         #view-hub { overflow-y: auto; padding-bottom: var(--safe-bottom); }
         .hub-card {
             background: linear-gradient(145deg, #18181b 0%, #09090b 100%);
@@ -56,11 +58,39 @@
         }
         .hub-game-card:active { transform: scale(0.97); }
 
-        /* --- RULETA STYLES (INTOCABLES) --- */
+        .brand-via {
+            color: #FFD700;
+            text-shadow: 0 0 10px rgba(255, 215, 0, 0.4), 0 0 20px rgba(255, 215, 0, 0.2);
+            text-transform: none; /* Conserva la í minúscula como pediste */
+        }
+
+        /* --- MONEDA 3D SVG INLINE (Tarjeta Cara o Cruz) --- */
+        .coin-3d {
+            width: 80px; height: 80px;
+            border-radius: 50%;
+            background: radial-gradient(circle at 30% 30%, #fef08a 0%, #eab308 30%, #a16207 80%, #713f12 100%);
+            box-shadow: 
+                inset 0 0 15px rgba(255,255,255,0.8),
+                inset 0 0 5px rgba(0,0,0,0.5),
+                0 10px 15px rgba(0,0,0,0.8),
+                0 0 20px rgba(234, 179, 8, 0.4);
+            position: relative;
+            display: flex; align-items: center; justify-content: center;
+            border: 2px solid #fef08a;
+            transform-style: preserve-3d;
+            perspective: 1000px;
+        }
+        .coin-3d::after {
+            content: '€';
+            font-size: 2.5rem; font-weight: 900; color: #713f12;
+            text-shadow: 1px 1px 0px #fef08a, -1px -1px 0px #a16207;
+            transform: translateZ(10px);
+        }
+
+        /* --- VISTA RULETA (CSS INTOCABLE) --- */
         .jackpot-row { flex: 0 0 auto; background: linear-gradient(180deg, #18181b 0%, #09090b 100%); border-bottom: 1px solid #27272a; height: 32px; }
         .j-grand { text-shadow: 0 0 10px #facc15; animation: slow-pulse 2s infinite; }
         @keyframes slow-pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.7; } }
-        
         header { flex: 0 0 auto; height: 48px; }
 
         #roulette-container {
@@ -178,10 +208,8 @@
 </head>
 <body>
 
-    <!-- MENSAJE TOAST -->
     <div id="toast-msg">Saldo Insuficiente</div>
 
-    <!-- PANTALLAS DE CARGA Y ERROR -->
     <div id="sys-loading" class="absolute inset-0 z-[200] bg-black flex flex-col items-center justify-center">
         <div class="text-5xl mb-4">🔥</div>
         <p class="text-orange-500 font-bold uppercase tracking-widest text-sm animate-pulse">Conectando...</p>
@@ -191,26 +219,24 @@
     </div>
 
     <!-- ==========================================
-         VISTA 1: HUB / PERFIL PRINCIPAL
+         VISTA 1: HUB SPIN VÍA
          ========================================== -->
     <div id="view-hub" class="view-section active">
         <div class="flex-1 flex flex-col w-full max-w-md mx-auto p-4 pt-8">
             
-            <!-- Branding Logo -->
+            <!-- BRANDING SPIN VÍA -->
             <div class="text-center mb-8">
-                <h1 class="text-3xl font-black tracking-widest text-white">
-                    MEGA<span class="text-red-600">FIRE</span>
+                <h1 class="text-4xl font-black tracking-widest text-white uppercase">
+                    Spin <span class="brand-via">Vía</span>
                 </h1>
-                <p class="text-yellow-500 text-xs font-bold tracking-[0.3em] uppercase mt-1">Casino</p>
+                <p class="text-zinc-500 text-[10px] font-bold tracking-[0.4em] uppercase mt-2">Premium Casino</p>
             </div>
 
             <!-- TARJETA: PERFIL Y SALDO -->
             <div class="hub-card rounded-2xl p-5 mb-6 relative overflow-hidden">
-                <!-- Glow decorativo -->
-                <div class="absolute -top-10 -right-10 w-32 h-32 bg-red-600/20 blur-3xl rounded-full pointer-events-none"></div>
+                <div class="absolute -top-10 -right-10 w-32 h-32 bg-red-600/10 blur-3xl rounded-full pointer-events-none"></div>
                 
                 <div class="flex items-center gap-4 relative z-10">
-                    <!-- Avatar UI CSS -->
                     <div class="w-14 h-14 rounded-full bg-black border border-yellow-500/50 shadow-[0_0_15px_rgba(234,179,8,0.2)] flex items-center justify-center text-2xl flex-shrink-0">
                         🎰
                     </div>
@@ -226,14 +252,13 @@
                 </div>
             </div>
 
-            <!-- TARJETA: ROLLOVER PROGRESO -->
+            <!-- TARJETA: PROGRESO -->
             <div class="hub-card rounded-2xl p-5 mb-8">
                 <div class="flex justify-between items-end mb-3">
                     <span class="text-[11px] font-black uppercase tracking-widest text-zinc-300">Rollover</span>
                     <span id="hub-progress-pct" class="text-xl font-black text-yellow-500">0%</span>
                 </div>
                 
-                <!-- Barra visual -->
                 <div class="w-full h-2.5 bg-black rounded-full overflow-hidden border border-zinc-800 mb-3 shadow-inner">
                     <div id="hub-progress-bar" class="h-full bg-gradient-to-r from-red-600 to-yellow-500 rounded-full transition-all duration-500" style="width: 0%"></div>
                 </div>
@@ -248,36 +273,42 @@
             <div class="mb-4">
                 <h3 class="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-500 mb-3 px-1">Juegos Disponibles</h3>
                 
-                <!-- TARJETA: MEGA FIRE ROULETTE -->
-                <div onclick="goToRoulette()" class="hub-game-card rounded-2xl p-1 relative group cursor-pointer">
-                    <!-- Efecto hover visual -->
-                    <div class="absolute inset-0 bg-red-600/10 opacity-0 group-hover:opacity-100 transition-opacity rounded-2xl"></div>
-                    
-                    <div class="border border-zinc-800/50 bg-black/40 rounded-xl p-6 flex flex-col items-center text-center relative z-10">
-                        <div class="text-5xl mb-3 filter drop-shadow-[0_0_15px_rgba(239,68,68,0.5)]">🎰🔥</div>
-                        <h4 class="text-2xl font-black text-transparent bg-clip-text bg-gradient-to-r from-yellow-400 to-red-500 uppercase tracking-widest mb-1">Mega Fire</h4>
-                        <p class="text-xs text-zinc-400 font-bold uppercase tracking-[0.3em] mb-5">Roulette</p>
-                        
-                        <div class="w-full py-3 bg-gradient-to-b from-red-600 to-red-800 border border-red-500 rounded-lg text-white font-black uppercase tracking-widest text-sm shadow-[0_4px_15px_rgba(220,38,38,0.4)] flex justify-center items-center gap-2">
-                            Jugar Ahora <span class="text-lg leading-none">→</span>
+                <div class="grid grid-cols-1 gap-4">
+                    <!-- TARJETA: MEGA FIRE ROULETTE -->
+                    <div onclick="goToRoulette()" class="hub-game-card rounded-2xl p-1 relative group cursor-pointer">
+                        <div class="absolute inset-0 bg-red-600/10 opacity-0 group-hover:opacity-100 transition-opacity rounded-2xl"></div>
+                        <div class="border border-zinc-800/50 bg-black/40 rounded-xl p-5 flex flex-col items-center text-center relative z-10">
+                            <div class="text-5xl mb-2 filter drop-shadow-[0_0_15px_rgba(239,68,68,0.5)]">🎰🔥</div>
+                            <h4 class="text-xl font-black text-transparent bg-clip-text bg-gradient-to-r from-yellow-400 to-red-500 uppercase tracking-widest mb-1">Mega Fire</h4>
+                            <p class="text-[10px] text-zinc-400 font-bold uppercase tracking-[0.3em] mb-4">Roulette</p>
+                            <div class="w-full py-2.5 bg-gradient-to-b from-red-600 to-red-800 border border-red-500 rounded text-white font-black uppercase tracking-widest text-xs shadow-[0_4px_15px_rgba(220,38,38,0.4)] flex justify-center items-center gap-2">
+                                Jugar <span class="text-lg leading-none">→</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- TARJETA: CARA O CRUZ (Redirige a archivo independiente preservando el código) -->
+                    <div onclick="goToCaraOCruz()" class="hub-card rounded-2xl p-1 relative group cursor-pointer border border-zinc-700/50 hover:border-yellow-500/50 transition-colors">
+                        <div class="border border-zinc-800/50 bg-black/40 rounded-xl p-5 flex flex-col items-center text-center relative z-10">
+                            <!-- Moneda 3D generada por CSS -->
+                            <div class="coin-3d mb-4"></div>
+                            <h4 class="text-xl font-black text-white uppercase tracking-widest mb-1">Cara o Cruz</h4>
+                            <p class="text-[10px] text-zinc-400 font-bold uppercase tracking-[0.3em] mb-4">Coin Flip</p>
+                            <div class="w-full py-2.5 bg-zinc-800 border border-zinc-600 rounded text-white font-black uppercase tracking-widest text-xs shadow-md flex justify-center items-center gap-2">
+                                Jugar <span class="text-lg leading-none">→</span>
+                            </div>
                         </div>
                     </div>
                 </div>
-                
-                <!-- Preparación Futura (Mantenido visualmente inactivo) -->
-                <!-- <div class="mt-4 hub-card rounded-2xl p-6 text-center opacity-50 cursor-not-allowed border-dashed">
-                    <span class="text-zinc-500 text-sm font-bold uppercase tracking-widest">Próximamente...</span>
-                </div> -->
             </div>
         </div>
     </div>
 
     <!-- ==========================================
-         VISTA 2: LA RULETA (EXISTENTE Y PROTEGIDA)
+         VISTA 2: MEGA FIRE ROULETTE (INTOCABLE)
          ========================================== -->
     <div id="view-betting" class="view-section bg-black">
         
-        <!-- CABECERA Y JACKPOTS -->
         <div class="jackpot-row flex justify-between px-2 w-full">
             <div class="text-center w-1/4 flex flex-col justify-center"><div class="text-[8px] text-green-400 font-bold uppercase leading-none">Mini</div><div class="text-xs font-black leading-none mt-0.5">x2</div></div>
             <div class="text-center w-1/4 flex flex-col justify-center border-l border-zinc-800"><div class="text-[8px] text-blue-400 font-bold uppercase leading-none">Minor</div><div class="text-xs font-black leading-none mt-0.5">x5</div></div>
@@ -286,7 +317,6 @@
         </div>
         
         <header class="px-3 bg-zinc-900 flex justify-between items-center border-b border-zinc-800 w-full relative z-50">
-            <!-- Nuevo: Botón "Volver al HUB" integrado en el perfil sin romper layout -->
             <div class="flex items-center w-1/3 h-full gap-2 overflow-hidden">
                 <button onclick="goToHub()" class="flex-none text-zinc-400 hover:text-white transition-colors px-1" title="Volver al HUB">
                     <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M15 19l-7-7 7-7"></path></svg>
@@ -309,25 +339,19 @@
             </div>
         </header>
 
-        <!-- ZONA RULETA -->
         <div id="roulette-container">
             <div id="phase-text" class="absolute top-1 text-[9px] font-black uppercase tracking-[0.2em] text-blue-400 z-40 bg-black/60 px-2 py-1 rounded-full border border-blue-500/30">
                 APUESTAS ABIERTAS
             </div>
-            
             <div id="wheel-wrapper" class="wheel-wrapper">
                 <div class="wheel-pointer" id="wheel-pointer"></div>
                 <div id="wheel-svg" class="wheel-svg"></div>
-                <div id="ball-orbit" class="ball-orbit">
-                    <div class="roulette-ball" id="r-ball"></div>
-                </div>
+                <div id="ball-orbit" class="ball-orbit"><div class="roulette-ball" id="r-ball"></div></div>
                 <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[30%] h-[30%] bg-zinc-900 border border-zinc-700 rounded-full z-20 box-shadow-[inset_0_0_10px_black]"></div>
             </div>
-
             <div id="results-history"></div>
         </div>
 
-        <!-- ZONA TABLERO -->
         <div id="board-zone">
             <div id="board-container" class="board-grid"></div>
             <div class="color-bets-row">
@@ -336,7 +360,6 @@
             </div>
         </div>
 
-        <!-- CONTROLES INFERIORES -->
         <div id="controls-zone">
             <div class="flex justify-between gap-1 mb-2 h-7">
                 <button onclick="setMode('bet', 100)" class="chip-btn btn-active-chip bg-zinc-800 border border-zinc-600 rounded flex-1 py-1.5 text-zinc-200 font-bold text-xs">100</button>
@@ -398,9 +421,7 @@
         </div>
     </div> <!-- FIN VIEW BETTING -->
 
-    <!-- ==========================================
-         LÓGICA JAVASCRIPT
-         ========================================== -->
+    <!-- LÓGICA JAVASCRIPT DE ROULETTE (INTOCABLE) -->
     <script>
         const { createClient } = supabase;
         const supabaseUrl = 'https://qutkwzjchchhbqfhtaxi.supabase.co';
@@ -427,7 +448,7 @@
             setTimeout(() => toast.style.opacity = '0', 2000);
         }
 
-        // --- SISTEMA DE VISTAS (NUEVO FLUJO) ---
+        // NAVEGACIÓN Y EXTRACCIÓN DE CÓDIGO URL
         function switchView(viewId) {
             document.querySelectorAll('.view-section').forEach(el => el.classList.remove('active'));
             document.getElementById(viewId).classList.add('active');
@@ -440,6 +461,16 @@
         function goToHub() {
             if (gameState === 'BETTING') {
                 switchView('view-hub');
+            }
+        }
+
+        function goToCaraOCruz() {
+            // Lee el código actual de la URL
+            const urlParams = new URLSearchParams(window.location.search);
+            const codigo = urlParams.get('codigo');
+            if(codigo) {
+                // Redirige al nuevo archivo HTML inyectando la misma clave de autenticación
+                window.location.href = `cara o cruz.html?codigo=${codigo}`;
             }
         }
 
@@ -459,28 +490,22 @@
             } else {
                 currentUser = data;
                 document.getElementById('sys-loading').classList.add('hidden');
-                
-                // INICIAMOS EN EL HUB
                 switchView('view-hub');
                 updateBalanceUI();
             }
         });
 
         function updateBalanceUI() {
-            // Actualizar datos en Ruleta
             document.getElementById('player-name-roulette').innerText = currentUser.nombre;
             const totalBet = Object.values(activeBets).reduce((a, b) => a + b, 0);
             const visualBalance = parseFloat(currentUser.saldo) - totalBet;
             document.getElementById('player-balance').innerHTML = `${visualBalance.toLocaleString('es-ES')} <span class="text-[10px] text-zinc-400">bits</span>`;
             
-            // Actualizar datos en HUB
             document.getElementById('hub-player-name').innerText = currentUser.nombre;
             document.getElementById('hub-player-balance').innerHTML = `${visualBalance.toLocaleString('es-ES')} <span class="text-sm text-zinc-500 font-bold">bits</span>`;
             
-            // Lógica de Progreso del HUB
             let tRealizadas = parseFloat(currentUser.tiradas_realizadas) || 0;
-            let tObjetivo = parseFloat(currentUser.tiradas_objetivo) || 1; // Prevenir div by 0
-            
+            let tObjetivo = parseFloat(currentUser.tiradas_objetivo) || 1; 
             let pct = Math.min(100, (tRealizadas / tObjetivo) * 100);
             let restantes = Math.max(0, tObjetivo - tRealizadas);
 
@@ -490,34 +515,21 @@
             document.getElementById('hub-progress-text2').innerText = `Equivalente: ${restantes} tiradas restantes`;
         }
 
-        /* --- RESTO DEL CÓDIGO DE RULETA INTACTO --- */
         function buildBoard() {
             const container = document.getElementById('board-container');
             container.innerHTML = '';
-            
             let cell0 = `<div class="board-cell cell-green" data-num="0" id="cell-0">
-                <span>0</span>
-                <div class="split-zone split-0-1" data-num="0|1"></div>
-                <div class="split-zone split-0-2" data-num="0|2"></div>
-                <div class="split-zone split-0-3" data-num="0|3"></div>
+                <span>0</span><div class="split-zone split-0-1" data-num="0|1"></div><div class="split-zone split-0-2" data-num="0|2"></div><div class="split-zone split-0-3" data-num="0|3"></div>
             </div>`;
             container.innerHTML += cell0;
-            
             for(let row=0; row<12; row++) {
                 for(let col=1; col<=3; col++) {
                     const num = (row * 3) + col;
                     const isRed = RED_NUMS.includes(num);
-                    
                     let splitsHtml = '';
                     if (col < 3) splitsHtml += `<div class="split-zone split-h" data-num="${num}|${num+1}"></div>`;
                     if (row < 11) splitsHtml += `<div class="split-zone split-v" data-num="${num}|${num+3}"></div>`;
-
-                    container.innerHTML += `
-                        <div class="board-cell cell-num ${isRed ? 'cell-red' : 'cell-black'}" data-num="${num}" id="cell-${num}">
-                            <span>${num}</span>
-                            ${splitsHtml}
-                        </div>
-                    `;
+                    container.innerHTML += `<div class="board-cell cell-num ${isRed ? 'cell-red' : 'cell-black'}" data-num="${num}" id="cell-${num}"><span>${num}</span>${splitsHtml}</div>`;
                 }
             }
         }
@@ -527,13 +539,8 @@
 
         function setupPointerEvents() {
             const board = document.getElementById('board-zone');
-            board.addEventListener('pointerdown', (e) => {
-                if (gameState !== 'BETTING') return;
-                isPainting = true; paintedInStroke.clear(); processPointer(e);
-            });
-            board.addEventListener('pointermove', (e) => {
-                if (!isPainting || gameState !== 'BETTING') return; processPointer(e);
-            });
+            board.addEventListener('pointerdown', (e) => { if (gameState !== 'BETTING') return; isPainting = true; paintedInStroke.clear(); processPointer(e); });
+            board.addEventListener('pointermove', (e) => { if (!isPainting || gameState !== 'BETTING') return; processPointer(e); });
             window.addEventListener('pointerup', () => { isPainting = false; });
             window.addEventListener('pointercancel', () => { isPainting = false; });
         }
@@ -541,10 +548,8 @@
         function processPointer(e) {
             const el = document.elementFromPoint(e.clientX, e.clientY);
             if (!el) return;
-
             const split = el.closest('.split-zone');
             const cell = el.closest('.board-cell');
-            
             let targetKey = null;
             if (split) targetKey = split.getAttribute('data-num');
             else if (cell) targetKey = cell.getAttribute('data-num');
@@ -560,7 +565,6 @@
             if(gameState !== 'BETTING') return;
             inputMode = mode;
             if (val) currentChip = val;
-            
             document.querySelectorAll('.chip-btn').forEach(btn => {
                 btn.classList.remove('btn-active-chip', 'btn-active-erase');
                 if (mode === 'bet' && parseInt(btn.innerText.replace('1K','1000')) === val) btn.classList.add('btn-active-chip');
@@ -570,13 +574,8 @@
 
         function placeBet(key) {
             if(gameState !== 'BETTING') return;
-            
             const currentTotal = Object.values(activeBets).reduce((a, b) => a + b, 0);
-            if (currentTotal + currentChip > currentUser.saldo) {
-                showToast("Saldo insuficiente");
-                return;
-            }
-
+            if (currentTotal + currentChip > currentUser.saldo) { showToast("Saldo insuficiente"); return; }
             activeBets[key] = (activeBets[key] || 0) + currentChip;
             betHistory.push({ type: 'add', key: key, amount: currentChip });
             if(navigator.vibrate) navigator.vibrate(10);
@@ -598,16 +597,13 @@
             if (action.type === 'add') {
                 activeBets[action.key] -= action.amount;
                 if (activeBets[action.key] <= 0) delete activeBets[action.key];
-            } else if (action.type === 'erase') {
-                activeBets[action.key] = action.amount;
-            }
+            } else if (action.type === 'erase') { activeBets[action.key] = action.amount; }
             updateBoardUI();
         }
 
         function clearBets() {
             if(gameState !== 'BETTING') return;
-            activeBets = {}; betHistory = [];
-            updateBoardUI();
+            activeBets = {}; betHistory = []; updateBoardUI();
         }
 
         function syncSpinButtons(enabled, isProcessing = false) {
@@ -647,8 +643,7 @@
             document.getElementById('total-bet-display').innerHTML = `${total.toLocaleString()} <span class="text-[9px] text-zinc-400">bits</span>`;
             updateBalanceUI();
             
-            if (total > 0) syncSpinButtons(true, false);
-            else syncSpinButtons(false, false);
+            if (total > 0) syncSpinButtons(true, false); else syncSpinButtons(false, false);
         }
 
         function getCoveredNumbers() {
@@ -717,12 +712,8 @@
 
             currentUser.saldo -= totalBet;
             currentUser.tiradas_realizadas += 1;
-            
-            // Actualiza visualmente el saldo general para que el HUB también esté al día
-            updateBalanceUI();
 
             const { mult, tipo } = getResultadoTirada(currentUser);
-            
             let resultNumber = null;
             const userNumbers = getCoveredNumbers();
             
@@ -745,7 +736,7 @@
             phaseText.innerText = '🔥 FIRE NUMBERS 🔥';
             phaseText.classList.replace('text-red-500', 'text-orange-500');
             phaseText.classList.replace('border-red-500/50', 'border-orange-500/50');
-            await new Promise(r => setTimeout(r, 300));
+            await new Promise(r => setTimeout(r, 400));
             
             for (let num of fireNumbers) {
                 document.getElementById(`cell-${num}`).classList.add('cell-fire');
