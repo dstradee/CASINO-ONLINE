@@ -11,28 +11,31 @@
 </head>
 <body class="bg-slate-100 text-slate-800 font-sans min-h-screen">
 
+    <!-- AVISO ARCHIVO LOCAL -->
+    <div id="local-warning" class="hidden bg-red-600 text-white font-bold p-4 text-center text-sm z-50">
+        ⚠️ ESTÁS ABRIENDO ESTO COMO ARCHIVO LOCAL (file://). <br>El login de Supabase NO funcionará hasta que lo subas a un hosting (Netlify, Vercel, etc).
+    </div>
+
     <!-- PANTALLA PRINCIPAL DE LOGIN -->
     <div id="login-view" class="min-h-screen bg-slate-900 flex flex-col justify-center items-center p-4">
         <div class="bg-slate-800 p-6 sm:p-8 rounded-2xl border border-slate-700 shadow-2xl w-full max-w-md">
             <div class="text-center mb-8">
                 <span class="text-6xl mb-4 block">🎰</span>
                 <h1 class="text-3xl font-black text-white tracking-wider">ADMIN</h1>
-                <p class="text-slate-400 text-sm mt-2">Acceso exclusivo para administradores</p>
             </div>
             
             <form id="login-form" class="space-y-5">
                 <div>
                     <label class="block text-sm font-bold text-slate-300 mb-2">Correo Electrónico</label>
-                    <input type="email" id="login-email" required placeholder="admin@casino.com" class="w-full bg-slate-900 border border-slate-600 text-white rounded-xl focus:ring-2 focus:ring-blue-500 focus:outline-none block p-4 text-lg">
+                    <input type="email" id="login-email" required class="w-full bg-slate-900 border border-slate-600 text-white rounded-xl focus:ring-2 focus:ring-blue-500 focus:outline-none block p-4 text-lg">
                 </div>
                 <div>
                     <label class="block text-sm font-bold text-slate-300 mb-2">Contraseña</label>
-                    <input type="password" id="login-password" required placeholder="••••••••" class="w-full bg-slate-900 border border-slate-600 text-white rounded-xl focus:ring-2 focus:ring-blue-500 focus:outline-none block p-4 text-lg">
+                    <input type="password" id="login-password" required class="w-full bg-slate-900 border border-slate-600 text-white rounded-xl focus:ring-2 focus:ring-blue-500 focus:outline-none block p-4 text-lg">
                 </div>
                 
-                <!-- ESTE ES EL CHIVATO: Te dirá el error exacto de Supabase -->
                 <div id="login-error" class="hidden text-red-400 text-sm font-bold text-center bg-red-900/20 p-3 rounded-lg border border-red-900/50">
-                    ⚠️ Error aquí
+                    Error aquí
                 </div>
                 
                 <button type="submit" id="btn-login" class="w-full text-white bg-blue-600 hover:bg-blue-500 active:bg-blue-700 font-black rounded-xl text-lg px-5 py-4 text-center transition-all shadow-[0_4px_15px_rgba(37,99,235,0.4)] mt-4">
@@ -46,65 +49,58 @@
     <div id="dashboard-view" class="hidden pb-20">
         <header class="bg-slate-900 text-white p-4 shadow-lg sticky top-0 z-50 flex justify-between items-center">
             <h1 class="text-lg font-black tracking-wider flex items-center gap-2">
-                <span>⚙️</span> PANEL ADMIN
+                <span>⚙️</span> ADMIN
             </h1>
             <div class="flex gap-2">
-                <button onclick="fetchUsers()" class="p-3 bg-slate-800 rounded-lg hover:bg-slate-700 active:scale-95 transition" title="Actualizar lista">
-                    🔄
-                </button>
-                <button id="btn-logout" class="px-4 py-3 bg-red-600/90 active:bg-red-700 rounded-lg text-sm font-bold transition shadow-md">
-                    Salir
-                </button>
+                <button onclick="fetchUsers()" class="p-3 bg-slate-800 rounded-lg hover:bg-slate-700 active:scale-95 transition">🔄</button>
+                <button id="btn-logout" class="px-4 py-3 bg-red-600/90 active:bg-red-700 rounded-lg text-sm font-bold transition shadow-md">Salir</button>
             </div>
         </header>
 
         <main class="max-w-4xl mx-auto p-4 mt-2 grid gap-6">
-            <!-- PANEL CREAR -->
             <section class="bg-white rounded-2xl shadow-sm border border-slate-200 p-5">
                 <h2 class="text-xl font-black text-slate-900 mb-4 border-b pb-3">➕ Nuevo Jugador</h2>
                 <form id="create-user-form" class="space-y-4">
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div>
-                            <label class="block text-sm font-bold text-slate-600 mb-2">Nombre del amigo</label>
-                            <input type="text" id="input-nombre" required placeholder="Ej: Juan" class="w-full bg-slate-50 border border-slate-300 text-slate-900 text-lg rounded-xl focus:ring-2 focus:ring-blue-500 focus:outline-none block p-3.5">
-                        </div>
-                        <div>
-                            <label class="block text-sm font-bold text-slate-600 mb-2">Ingreso (€)</label>
-                            <input type="number" id="input-euros" required min="1" step="0.1" placeholder="Ej: 5" class="w-full bg-slate-50 border border-slate-300 text-slate-900 text-lg rounded-xl focus:ring-2 focus:ring-blue-500 focus:outline-none block p-3.5">
-                        </div>
+                        <input type="text" id="input-nombre" required placeholder="Nombre (Ej: Juan)" class="w-full bg-slate-50 border border-slate-300 text-slate-900 text-lg rounded-xl block p-3.5">
+                        <input type="number" id="input-euros" required min="1" step="0.1" placeholder="Ingreso (€)" class="w-full bg-slate-50 border border-slate-300 text-slate-900 text-lg rounded-xl block p-3.5">
                     </div>
-
-                    <div>
-                        <label class="block text-sm font-bold text-slate-600 mb-2">Estrategia / Oferta</label>
-                        <select id="input-bono" class="w-full bg-slate-50 border border-slate-300 text-slate-900 text-base rounded-xl focus:ring-2 focus:ring-blue-500 focus:outline-none block p-3.5">
-                            <option value="sin_bono">NORMAL (x10,000 pts | Bloqueo: 150 tiradas)</option>
-                            <option value="con_bono">BONO DOBLE (Doble saldo | Bloqueo: 500 tiradas)</option>
-                        </select>
-                    </div>
-
-                    <button type="submit" id="btn-crear" class="w-full text-white bg-slate-900 active:bg-slate-800 font-black rounded-xl text-lg px-5 py-4 text-center transition-transform active:scale-95 shadow-lg mt-2">
+                    <select id="input-bono" class="w-full bg-slate-50 border border-slate-300 text-slate-900 text-base rounded-xl block p-3.5">
+                        <option value="sin_bono">NORMAL (x10,000 pts | Bloqueo 150)</option>
+                        <option value="con_bono">BONO DOBLE (Doble saldo | Bloqueo 500)</option>
+                    </select>
+                    <button type="submit" id="btn-crear" class="w-full text-white bg-slate-900 active:bg-slate-800 font-black rounded-xl text-lg px-5 py-4 text-center mt-2">
                         CREAR Y GENERAR ENLACE
                     </button>
                 </form>
 
                 <div id="magic-link-container" class="hidden mt-5 p-4 bg-green-100 border-2 border-green-400 rounded-xl">
-                    <p class="text-sm text-green-900 font-black mb-2 uppercase">✅ Enlace Listo. Cópialo:</p>
-                    <input type="text" id="magic-link-url" readonly class="w-full bg-white border border-green-300 text-green-900 text-sm font-mono rounded-lg p-3 focus:outline-none select-all">
+                    <input type="text" id="magic-link-url" readonly class="w-full bg-white border border-green-300 text-green-900 text-sm font-mono rounded-lg p-3">
                 </div>
             </section>
 
-            <!-- LISTA JUGADORES -->
             <section class="bg-white rounded-2xl shadow-sm border border-slate-200 p-5">
                 <h2 class="text-xl font-black text-slate-900 mb-4 border-b pb-3">👥 Jugadores Activos</h2>
-                <div id="users-grid" class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div class="text-slate-400 text-center py-6 font-bold w-full">Cargando datos...</div>
-                </div>
+                <div id="users-grid" class="grid grid-cols-1 sm:grid-cols-2 gap-4"></div>
             </section>
         </main>
     </div>
 
     <script>
-        // CONFIGURACIÓN SUPABASE
+        // 1. CHIVATOS DE ERROR GLOBALES (Para que no se quede mudo en móvil)
+        window.addEventListener('error', function(e) {
+            alert("🔥 ERROR FATAL JS: " + e.message);
+        });
+        window.addEventListener('unhandledrejection', function(e) {
+            alert("🔥 CONEXIÓN RECHAZADA: " + (e.reason ? e.reason.message || e.reason : 'Error desconocido de red'));
+        });
+
+        // Detectar si lo estás abriendo como archivo local
+        if (window.location.protocol === 'file:') {
+            document.getElementById('local-warning').classList.remove('hidden');
+        }
+
+        // 2. CONFIGURACIÓN SUPABASE
         const SUPABASE_URL = 'https://qutkwzjchchhbqfhtaxi.supabase.co';
         const SUPABASE_KEY = 'sb_publishable_fv4VSDx-LJrkorzY0bOKaA_0poFJcU1';
         const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
@@ -121,54 +117,61 @@
         function mostrarLogin() {
             dashboardView.classList.add('hidden');
             loginView.classList.remove('hidden');
-            document.getElementById('login-form').reset();
-            document.getElementById('login-error').classList.add('hidden');
         }
 
         async function comprobarSesionSilenciosa() {
-            const { data: { session } } = await supabase.auth.getSession();
-            if (session) {
-                mostrarDashboard();
+            try {
+                const { data: { session }, error } = await supabase.auth.getSession();
+                if (session) mostrarDashboard();
+            } catch (err) {
+                console.log("No hay sesión guardada o falló al leerla");
             }
         }
 
-        // LÓGICA DE LOGIN CON MANEJO DE ERRORES MEJORADO
+        // 3. LOGIN ULTRA-BLINDADO
         document.getElementById('login-form').addEventListener('submit', async (e) => {
             e.preventDefault();
             
             const btn = document.getElementById('btn-login');
             const errorMsg = document.getElementById('login-error');
-            const email = document.getElementById('login-email').value;
-            const password = document.getElementById('login-password').value;
+            const email = document.getElementById('login-email').value.trim();
+            const password = document.getElementById('login-password').value.trim();
 
             btn.disabled = true;
-            btn.innerHTML = "⏳ ENTRANDO...";
+            btn.innerHTML = "⏳ CONECTANDO...";
             errorMsg.classList.add('hidden');
 
-            const { data, error } = await supabase.auth.signInWithPassword({
-                email: email,
-                password: password,
-            });
+            try {
+                const { data, error } = await supabase.auth.signInWithPassword({
+                    email: email,
+                    password: password,
+                });
 
-            if (error) {
-                // AHORA SÍ: Te mostrará el error exacto para saber por qué falla
-                errorMsg.innerText = "⚠️ Error: " + error.message;
-                errorMsg.classList.remove('hidden');
+                if (error) {
+                    errorMsg.innerText = "❌ ERROR: " + error.message;
+                    errorMsg.classList.remove('hidden');
+                    // Tambien lanzamos un alert en el movil para asegurarnos de que lo ves
+                    alert("Supabase ha dicho que NO: " + error.message);
+                    btn.disabled = false;
+                    btn.innerHTML = "INICIAR SESIÓN";
+                } else {
+                    btn.disabled = false;
+                    btn.innerHTML = "INICIAR SESIÓN";
+                    mostrarDashboard();
+                }
+            } catch (err) {
+                alert("🚨 CRASHEO TOTAL AL INTENTAR CONECTAR: " + err.message + ". Esto suele pasar si lo abres como archivo local o no tienes internet.");
                 btn.disabled = false;
                 btn.innerHTML = "INICIAR SESIÓN";
-            } else {
-                btn.disabled = false;
-                btn.innerHTML = "INICIAR SESIÓN";
-                mostrarDashboard();
             }
         });
 
+        // 4. LÓGICA DEL PANEL
         document.getElementById('btn-logout').addEventListener('click', async () => {
             await supabase.auth.signOut();
             mostrarLogin();
         });
 
-        // LÓGICA CREAR USUARIO
         document.getElementById('create-user-form').addEventListener('submit', async (e) => {
             e.preventDefault();
             
@@ -176,126 +179,100 @@
             btn.disabled = true;
             btn.innerText = "⏳ GENERANDO...";
 
-            const nombre = document.getElementById('input-nombre').value.trim();
-            const euros = parseFloat(document.getElementById('input-euros').value);
-            const bono = document.getElementById('input-bono').value;
+            try {
+                const nombre = document.getElementById('input-nombre').value.trim();
+                const euros = parseFloat(document.getElementById('input-euros').value);
+                const bono = document.getElementById('input-bono').value;
 
-            let saldo_inicial = euros * 10000;
-            let tiradas_objetivo = 150;
+                let saldo_inicial = euros * 10000;
+                let tiradas_objetivo = 150;
 
-            if (bono === 'con_bono') {
-                saldo_inicial *= 2;
-                tiradas_objetivo = 500;
-            }
+                if (bono === 'con_bono') {
+                    saldo_inicial *= 2;
+                    tiradas_objetivo = 500;
+                }
 
-            const codigo = Math.random().toString(36).substring(2, 7).toUpperCase();
+                const codigo = Math.random().toString(36).substring(2, 7).toUpperCase();
 
-            const { data, error } = await supabase
-                .from('usuarios')
-                .insert([{
-                    codigo: codigo,
-                    nombre: nombre,
-                    saldo: saldo_inicial,
-                    tiradas_realizadas: 0,
-                    tiradas_objetivo: tiradas_objetivo
-                }]);
+                const { data, error } = await supabase
+                    .from('usuarios')
+                    .insert([{ codigo: codigo, nombre: nombre, saldo: saldo_inicial, tiradas_realizadas: 0, tiradas_objetivo: tiradas_objetivo }]);
 
-            if (error) {
-                alert("Error: " + error.message);
+                if (error) throw error;
+
+                // Si estás en archivo local, poner ruta hardcodeada para que al menos te genere algo
+                let basePath = window.location.protocol === 'file:' ? 'misitio.com' : window.location.href.substring(0, window.location.href.lastIndexOf('/'));
+                const magicUrl = `${basePath}/index.html?codigo=${codigo}`;
+                
+                document.getElementById('magic-link-url').value = magicUrl;
+                document.getElementById('magic-link-container').classList.remove('hidden');
+                document.getElementById('create-user-form').reset();
+                fetchUsers();
+            } catch(err) {
+                alert("Error al crear: " + err.message);
+            } finally {
                 btn.disabled = false;
                 btn.innerText = "CREAR Y GENERAR ENLACE";
-                return;
             }
-
-            let currentPath = window.location.href;
-            let basePath = currentPath.substring(0, currentPath.lastIndexOf('/'));
-            const magicUrl = `${basePath}/index.html?codigo=${codigo}`;
-            
-            document.getElementById('magic-link-url').value = magicUrl;
-            document.getElementById('magic-link-container').classList.remove('hidden');
-
-            document.getElementById('create-user-form').reset();
-            btn.disabled = false;
-            btn.innerText = "CREAR Y GENERAR ENLACE";
-            
-            fetchUsers();
         });
 
-        // LÓGICA LEER USUARIOS
         async function fetchUsers() {
             const container = document.getElementById('users-grid');
-            
-            const { data: usuarios, error } = await supabase
-                .from('usuarios')
-                .select('*')
-                .order('id', { ascending: false });
+            try {
+                const { data: usuarios, error } = await supabase.from('usuarios').select('*').order('id', { ascending: false });
+                if (error) throw error;
 
-            if (error) {
-                container.innerHTML = `<div class="text-red-500 font-bold text-center w-full">Error al cargar: ${error.message}</div>`;
-                return;
-            }
+                if (usuarios.length === 0) {
+                    container.innerHTML = '<div class="text-slate-400 font-bold text-center w-full">Sin jugadores.</div>';
+                    return;
+                }
 
-            if (usuarios.length === 0) {
-                container.innerHTML = '<div class="text-slate-400 font-bold text-center w-full">No hay jugadores activos.</div>';
-                return;
-            }
-
-            container.innerHTML = ''; 
-
-            usuarios.forEach(user => {
-                let progressRaw = (user.tiradas_realizadas / user.tiradas_objetivo) * 100;
-                let progress = Math.min(progressRaw, 100).toFixed(1);
-
-                const card = document.createElement('div');
-                card.className = "bg-slate-50 border border-slate-200 rounded-xl p-4 flex flex-col shadow-sm";
-                
-                card.innerHTML = `
-                    <div class="flex justify-between items-start mb-3">
-                        <h3 class="font-black text-slate-800 text-xl truncate pr-2">${user.nombre}</h3>
-                        <span class="bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded font-mono font-black tracking-widest border border-blue-200">${user.codigo}</span>
-                    </div>
-                    
-                    <div class="text-base text-slate-600 mb-4 space-y-2">
-                        <p class="flex justify-between border-b border-slate-200 pb-1">
-                            <span class="font-bold">Saldo:</span> 
-                            <span class="font-black text-green-600 text-lg">${Math.floor(user.saldo).toLocaleString()} pts</span>
-                        </p>
-                        <p class="flex justify-between">
-                            <span class="font-bold">Rollover:</span> 
-                            <span class="font-bold text-slate-800">${user.tiradas_realizadas} / ${user.tiradas_objetivo}</span>
-                        </p>
-                        <div class="w-full bg-slate-200 rounded-full h-2.5 mt-2">
-                            <div class="bg-blue-500 h-2.5 rounded-full" style="width: ${progress}%"></div>
+                container.innerHTML = ''; 
+                usuarios.forEach(user => {
+                    let progress = Math.min((user.tiradas_realizadas / user.tiradas_objetivo) * 100, 100).toFixed(1);
+                    const card = document.createElement('div');
+                    card.className = "bg-slate-50 border border-slate-200 rounded-xl p-4 flex flex-col shadow-sm";
+                    card.innerHTML = `
+                        <div class="flex justify-between items-start mb-3">
+                            <h3 class="font-black text-slate-800 text-xl truncate pr-2">${user.nombre}</h3>
+                            <span class="bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded font-mono font-black border border-blue-200">${user.codigo}</span>
                         </div>
-                    </div>
-
-                    <button onclick="recargarSaldo('${user.id}', ${user.saldo}, this)" class="mt-auto w-full bg-emerald-500 active:bg-emerald-600 text-white font-black py-3 px-4 rounded-xl transition-transform active:scale-95 shadow-md flex items-center justify-center gap-2 text-base">
-                        💵 +10K pts (Recarga)
-                    </button>
-                `;
-
-                container.appendChild(card);
-            });
+                        <div class="text-base text-slate-600 mb-4 space-y-2">
+                            <p class="flex justify-between border-b pb-1">
+                                <span class="font-bold">Saldo:</span> 
+                                <span class="font-black text-green-600">${Math.floor(user.saldo).toLocaleString()} pts</span>
+                            </p>
+                            <p class="flex justify-between">
+                                <span class="font-bold">Roll:</span> 
+                                <span class="font-bold text-slate-800">${user.tiradas_realizadas} / ${user.tiradas_objetivo}</span>
+                            </p>
+                            <div class="w-full bg-slate-200 rounded-full h-2 mt-2">
+                                <div class="bg-blue-500 h-2 rounded-full" style="width: ${progress}%"></div>
+                            </div>
+                        </div>
+                        <button onclick="recargarSaldo('${user.id}', ${user.saldo}, this)" class="mt-auto w-full bg-emerald-500 active:bg-emerald-600 text-white font-black py-3 px-4 rounded-xl shadow-md flex items-center justify-center">
+                            💵 +10K pts
+                        </button>
+                    `;
+                    container.appendChild(card);
+                });
+            } catch (err) {
+                container.innerHTML = `<div class="text-red-500 font-bold text-center w-full">Error: ${err.message}</div>`;
+            }
         }
 
         async function recargarSaldo(userId, saldoActual, btnElement) {
-            const originalText = btnElement.innerHTML;
             btnElement.disabled = true;
-            btnElement.innerHTML = "⏳ CARGANDO...";
-            btnElement.classList.replace('bg-emerald-500', 'bg-slate-400');
-
-            const nuevoSaldo = saldoActual + 10000;
-
-            const { data, error } = await supabase
-                .from('usuarios')
-                .update({ saldo: nuevoSaldo })
-                .eq('id', userId);
-
-            if (error) {
-                alert("Error: " + error.message);
+            btnElement.innerHTML = "⏳...";
+            try {
+                const { error } = await supabase.from('usuarios').update({ saldo: saldoActual + 10000 }).eq('id', userId);
+                if (error) throw error;
+                fetchUsers();
+            } catch (err) {
+                alert("Error recarga: " + err.message);
+                btnElement.disabled = false;
+                btnElement.innerHTML = "💵 +10K pts";
             }
-
-            fetchUsers();
         }
 
         window.addEventListener('DOMContentLoaded', comprobarSesionSilenciosa);
