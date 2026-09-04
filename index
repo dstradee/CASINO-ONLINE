@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Megafire Casino</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Supabase CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    
+    <style>
+        /* Animaciones para el engagement y la dopamina */
+        @keyframes pulse-glow {
+            0%, 100% { box-shadow: 0 0 15px #39ff14, inset 0 0 10px #39ff14; }
+            50% { box-shadow: 0 0 30px #39ff14, inset 0 0 20px #39ff14; }
+        }
+        @keyframes jackpot-glow {
+            0%, 100% { box-shadow: 0 0 20px #FFD700, inset 0 0 15px #FFD700; transform: scale(1); }
+            50% { box-shadow: 0 0 40px #FFD700, inset 0 0 25px #FFD700; transform: scale(1.05); }
+        }
+        @keyframes megafire-spin {
+            0% { transform: translateY(-10px) scale(0.95); opacity: 0.8; filter: hue-rotate(0deg); }
+            50% { transform: translateY(10px) scale(1.1); opacity: 1; filter: hue-rotate(180deg); }
+            100% { transform: translateY(-10px) scale(0.95); opacity: 0.8; filter: hue-rotate(360deg); }
+        }
+        
+        .falso-premio {
+            animation: pulse-glow 0.6s infinite;
+            color: #39ff14;
+            text-shadow: 0 0 10px #39ff14;
+            border: 2px solid #39ff14;
+        }
+        .gran-premio {
+            animation: jackpot-glow 0.5s infinite;
+            color: #FFD700;
+            text-shadow: 0 0 15px #FFD700;
+            border: 2px solid #FFD700;
+        }
+        .spin-active {
+            animation: megafire-spin 0.2s infinite linear;
+        }
+        
+        /* Ocultar barra de desplazamiento */
+        ::-webkit-scrollbar { display: none; }
+        body { -ms-overflow-style: none; scrollbar-width: none; touch-action: manipulation; }
+    </style>
+</head>
+<body class="bg-slate-900 text-white font-sans h-screen flex flex-col items-center justify-center overflow-hidden">
+
+    <!-- Pantalla de Acceso Denegado -->
+    <div id="access-denied" class="hidden absolute inset-0 bg-slate-900 z-50 flex flex-col items-center justify-center p-6 text-center">
+        <div class="text-red-500 text-6xl mb-4">⚠️</div>
+        <h1 class="text-3xl font-black text-white mb-2">Acceso Denegado</h1>
+        <p class="text-slate-400">Enlace inválido o código de jugador no encontrado.</p>
+    </div>
+
+    <!-- Pantalla de Carga -->
+    <div id="loading" class="absolute inset-0 bg-slate-900 z-40 flex flex-col items-center justify-center">
+        <div class="w-16 h-16 border-4 border-slate-700 border-t-green-400 rounded-full animate-spin"></div>
+        <p class="mt-4 text-green-400 font-bold tracking-widest animate-pulse">CONECTANDO...</p>
+    </div>
+
+    <!-- Interfaz Principal del Juego -->
+    <div id="game-ui" class="hidden w-full max-w-md h-full flex flex-col relative">
+        
+        <!-- Header: Información del Jugador -->
+        <header class="p-4 bg-slate-800/50 border-b border-slate-700 flex justify-between items-center shadow-lg">
+            <div>
+                <p class="text-xs text-slate-400 uppercase tracking-wider">Jugador</p>
+                <h2 id="player-name" class="text-lg font-bold text-white truncate max-w-[150px]">---</h2>
+            </div>
+            <div class="text-right">
+                <p class="text-xs text-slate-400 uppercase tracking-wider">Saldo Total</p>
+                <div class="flex items-center justify-end gap-1">
+                    <span class="text-yellow-400 text-xl font-black" id="player-balance">0</span>
+                    <span class="text-yellow-400 text-sm">pts</span>
+                </div>
+            </div>
+        </header>
+
+        <!-- Barra de Progreso (Rollover - Psicología) -->
+        <div class="px-6 py-4">
+            <div class="flex justify-between items-end mb-1">
+                <span class="text-sm font-semibold text-slate-300">Bono desbloqueado:</span>
+                <span id="progress-text" class="text-green-400 font-black text-lg">0%</span>
+            </div>
+            <div class="w-full h-4 bg-slate-800 rounded-full overflow-hidden border border-slate-700 relative">
+                <div id="progress-bar" class="h-full bg-gradient-to-r from-green-600 to-green-400 transition-all duration-700 ease-out" style="width: 0%;"></div>
+            </div>
+        </div>
+
+        <!-- Área Central del Juego (Display Megafire) -->
+        <div class="flex-1 flex flex-col items-center justify-center p-6 relative">
+            <div id="display-container" class="w-full aspect-square max-h-[300px] bg-slate-950 rounded-full border-4 border-slate-800 shadow-[0_0_50px_rgba(0,0,0,0.5)] flex flex-col items-center justify-center transition-all duration-300 relative z-10">
+                <span id="display-title" class="text-slate-500 font-bold uppercase tracking-[0.2em] text-sm mb-2">Megafire</span>
+                <div id="display-value" class="text-6xl font-black text-slate-300 text-center leading-tight">
+                    LISTO
+                </div>
+            </div>
+            
+            <!-- Botón de Retiro (Oculto hasta el 100%) -->
+            <button id="withdraw-btn" class="hidden mt-8 px-6 py-3 bg-gradient-to-r from-yellow-500 to-yellow-600 text-slate-900 font-black rounded-full shadow-[0_0_20px_rgba(234,179,8,0.5)] uppercase tracking-widest text-sm hover:scale-105 transition-transform">
+                💰 Solicitar Retiro 💰
+            </button>
+        </div>
+
+        <!-- Área de Acción -->
+        <div class="p-6 pb-10 bg-slate-800/80 rounded-t-3xl border-t border-slate-700 shadow-[0_-10px_40px_rgba(0,0,0,0.3)]">
+            <button id="spin-btn" class="w-full py-5 bg-gradient-to-b from-green-400 to-green-600 rounded-2xl shadow-[0_10px_0_#166534,0_15px_20px_rgba(0,0,0,0.4)] active:shadow-[0_0px_0_#166534,0_0px_0_rgba(0,0,0,0)] active:translate-y-[10px] transition-all flex flex-col items-center justify-center gap-1">
+                <span class="text-3xl font-black text-white uppercase tracking-widest" style="text-shadow: 0 2px 4px rgba(0,0,0,0.5);">Tirar</span>
+                <span class="text-green-100 font-bold text-sm bg-black/20 px-3 py-1 rounded-full">Coste: 100 pts</span>
+            </button>
+        </div>
+    </div>
+
+    <script>
+        // --- 1. CONFIGURACIÓN SUPABASE ---
+        const SUPABASE_URL = 'https://qutkwzjchchhbqfhtaxi.supabase.co';
+        const SUPABASE_KEY = 'sb_publishable_fv4VSDx-LJrkorzY0bOKaA_0poFJcU1';
+        const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+        // --- 2. VARIABLES DE ESTADO ---
+        let userData = null;
+        let isSpinning = false;
+        
+        // Elementos del DOM
+        const elLoading = document.getElementById('loading');
+        const elAccessDenied = document.getElementById('access-denied');
+        const elGameUI = document.getElementById('game-ui');
+        const elPlayerName = document.getElementById('player-name');
+        const elPlayerBalance = document.getElementById('player-balance');
+        const elProgressBar = document.getElementById('progress-bar');
+        const elProgressText = document.getElementById('progress-text');
+        const elDisplayContainer = document.getElementById('display-container');
+        const elDisplayValue = document.getElementById('display-value');
+        const elSpinBtn = document.getElementById('spin-btn');
+        const elWithdrawBtn = document.getElementById('withdraw-btn');
+
+        // --- 3. LÓGICA DE INICIALIZACIÓN (Fricción Cero) ---
+        async function initGame() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const codigo = urlParams.get('codigo');
+
+            if (!codigo) {
+                showAccessDenied();
+                return;
+            }
+
+            // Consultar datos a Supabase
+            const { data, error } = await supabase
+                .from('usuarios')
+                .select('*')
+                .eq('codigo', codigo)
+                .single();
+
+            if (error || !data) {
+                showAccessDenied();
+                return;
+            }
+
+            userData = data;
+            updateUI();
+            
+            elLoading.classList.add('hidden');
+            elGameUI.classList.remove('hidden');
+        }
+
+        function showAccessDenied() {
+            elLoading.classList.add('hidden');
+            elAccessDenied.classList.remove('hidden');
+        }
+
+        function updateUI() {
+            elPlayerName.innerText = userData.nombre;
+            elPlayerBalance.innerText = Math.floor(userData.saldo);
+
+            // Calcular Rollover (Progreso)
+            let rawProgress = (userData.tiradas_realizadas / userData.tiradas_objetivo) * 100;
+            let progress = Math.min(rawProgress, 100);
+
+            elProgressBar.style.width = `${progress}%`;
+            elProgressText.innerText = `${progress.toFixed(1)}%`;
+
+            // Mostrar botón de retiro si llegó al 100%
+            if (progress >= 100) {
+                elWithdrawBtn.classList.remove('hidden');
+            } else {
+                elWithdrawBtn.classList.add('hidden');
+            }
+
+            // Validar saldo para el botón
+            if (userData.saldo < 100) {
+                elSpinBtn.disabled = true;
+                elSpinBtn.classList.add('opacity-50', 'cursor-not-allowed');
+                elSpinBtn.querySelector('span:first-child').innerText = 'SALDO INSUFICIENTE';
+            } else {
+                elSpinBtn.disabled = false;
+                elSpinBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+                elSpinBtn.querySelector('span:first-child').innerText = 'TIRAR';
+            }
+        }
+
+        // --- 4. LÓGICA DEL JUEGO Y PROBABILIDADES ---
+        function calculateOutcome() {
+            const tiradaActual = userData.tiradas_realizadas + 1; // +1 porque se suma la actual
+            const rand = Math.random();
+
+            if (tiradaActual <= 50) {
+                // FASE DE ENGANCHE (1 a 50)
+                if (rand < 0.20) return 0;       // 20% x0
+                if (rand < 0.50) return 30;      // 30% x0.3 (Falso Ganar) - prob acumulada (0.2 + 0.3)
+                if (rand < 0.90) return 120;     // 40% x1.2 - prob acumulada (0.5 + 0.4)
+                return 500;                      // 10% x5
+            } else {
+                // FASE DE DESANGRE (51+)
+                if (rand < 0.50) return 0;       // 50% x0
+                if (rand < 0.90) return 30;      // 40% x0.3 (Falso Ganar)
+                if (rand < 0.98) return 120;     // 8% x1.2
+                return 500;                      // 2% x5
+            }
+        }
+
+        // --- 5. ACCIÓN: TIRAR ---
+        elSpinBtn.addEventListener('click', async () => {
+            if (isSpinning || userData.saldo < 100) return;
+            
+            isSpinning = true;
+            elSpinBtn.disabled = true;
+            
+            // 1. Optimistic Update (Restar 100 pts y sumar tirada instantáneamente para dar agilidad)
+            userData.saldo -= 100;
+            userData.tiradas_realizadas += 1;
+            updateUI(); // Se actualiza el progreso y baja el saldo
+
+            // Limpiar estilos anteriores
+            elDisplayContainer.className = "w-full aspect-square max-h-[300px] bg-slate-950 rounded-full border-4 border-slate-800 shadow-[0_0_50px_rgba(0,0,0,0.5)] flex flex-col items-center justify-center transition-all duration-300 relative z-10 spin-active";
+            
+            // 2. Animación de "Megafire" (1.5 segundos)
+            const colors = ['text-green-400', 'text-yellow-400', 'text-red-400', 'text-blue-400', 'text-purple-400', 'text-white'];
+            let animInterval = setInterval(() => {
+                const randNum = Math.floor(Math.random() * 9999);
+                const randColor = colors[Math.floor(Math.random() * colors.length)];
+                elDisplayValue.innerHTML = `<span class="${randColor}">${randNum}</span>`;
+            }, 50);
+
+            // 3. Obtener el premio matemático
+            const premio = calculateOutcome();
+
+            // 4. Detener animación y mostrar resultados (después de 1.5s)
+            setTimeout(async () => {
+                clearInterval(animInterval);
+                elDisplayContainer.classList.remove('spin-active');
+                
+                // Psicología visual del resultado
+                if (premio === 30) {
+                    // EFECTO FALSO GANAR: El jugador perdió 70 pts netos, pero lo celebramos como una victoria
+                    elDisplayContainer.classList.add('falso-premio', 'bg-green-900/20');
+                    elDisplayValue.innerHTML = `<span class="text-3xl">¡PREMIO!</span><br><span class="text-5xl text-white">+30</span>`;
+                } else if (premio === 120 || premio === 500) {
+                    // PREMIO REAL O JACKPOT
+                    elDisplayContainer.classList.add('gran-premio', 'bg-yellow-900/20');
+                    elDisplayValue.innerHTML = `<span class="text-3xl text-yellow-400">¡JACKPOT!</span><br><span class="text-5xl text-white">+${premio}</span>`;
+                } else {
+                    // PERDIDA TOTAL
+                    elDisplayContainer.classList.add('border-slate-700');
+                    elDisplayValue.innerHTML = `<span class="text-3xl text-slate-500">CASI...</span><br><span class="text-2xl text-slate-600 mt-2">Intenta de nuevo</span>`;
+                }
+
+                // Sumar el premio al saldo
+                userData.saldo += premio;
+                updateUI();
+
+                // 5. Actualizar en Supabase en segundo plano (Evita trabar el UI)
+                await supabase
+                    .from('usuarios')
+                    .update({ 
+                        saldo: userData.saldo, 
+                        tiradas_realizadas: userData.tiradas_realizadas 
+                    })
+                    .eq('codigo', userData.codigo);
+
+                isSpinning = false;
+                if (userData.saldo >= 100) elSpinBtn.disabled = false;
+
+            }, 1500);
+        });
+
+        // Botón retiro genérico
+        elWithdrawBtn.addEventListener('click', () => {
+            alert("¡Solicitud de retiro enviada a revisión! Te contactaremos pronto.");
+        });
+
+        // Arrancar
+        window.addEventListener('DOMContentLoaded', initGame);
+    </script>
+</body>
+</html>
