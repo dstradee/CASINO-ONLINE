@@ -2,219 +2,283 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Admin - Megafire Casino</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Panel de Administración | Casino</title>
+    <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Supabase JS v2 -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    
+    <style>
+        /* Ocultar el body inicial por seguridad */
+        #app-container { display: none; }
+    </style>
 </head>
-<body class="bg-slate-900 text-white font-sans min-h-screen pb-20">
+<body class="bg-gray-900 text-gray-100 font-sans min-h-screen">
 
-    <header class="bg-slate-950 p-4 shadow-lg sticky top-0 z-50 border-b border-slate-800">
-        <h1 class="text-2xl font-black tracking-wider text-center text-blue-400">
-            🎰 ADMIN CASINO
-        </h1>
-    </header>
+    <!-- Mensaje si falla la contraseña -->
+    <div id="auth-error" class="hidden flex h-screen items-center justify-center">
+        <h1 class="text-3xl text-red-500 font-bold bg-gray-800 p-8 rounded-lg shadow-xl">Acceso Denegado</h1>
+    </div>
 
-    <main class="max-w-3xl mx-auto p-4 mt-4 space-y-8">
+    <!-- Contenedor Principal (Panel) -->
+    <div id="app-container" class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        
+        <header class="mb-8">
+            <h1 class="text-4xl font-extrabold text-white tracking-tight">Admin<span class="text-blue-500">Panel</span></h1>
+            <p class="text-gray-400 mt-2">Gestión de jugadores y saldos</p>
+        </header>
 
-        <!-- CAJA DE CREAR JUGADOR -->
-        <section class="bg-slate-800 rounded-2xl p-5 border border-slate-700 shadow-xl">
-            <h2 class="text-xl font-black mb-4 text-white">➕ Crear Jugador</h2>
+        <!-- Contenedor Alertas -->
+        <div id="alert-box"></div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
             
-            <form id="form-crear" class="space-y-4">
-                <div class="grid grid-cols-2 gap-4">
+            <!-- TARJETA: FORMULARIO DE CREACIÓN (Izquierda) -->
+            <div class="bg-gray-800 rounded-xl shadow-lg border border-gray-700 p-6 lg:col-span-1 h-fit">
+                <h2 class="text-xl font-bold text-white mb-6 border-b border-gray-700 pb-2">Nuevo Jugador</h2>
+                
+                <form id="createUserForm" class="space-y-5">
+                    <!-- Nombre -->
                     <div>
-                        <label class="block text-xs font-bold text-slate-400 mb-1">NOMBRE</label>
-                        <input type="text" id="nombre" required placeholder="Ej: Paco" class="w-full bg-slate-900 border border-slate-600 rounded-lg p-3 text-white font-bold focus:border-blue-500 focus:outline-none">
+                        <label for="nombre" class="block text-sm font-medium text-gray-300 mb-1">Nombre del jugador</label>
+                        <input type="text" id="nombre" required placeholder="Ej: Carlos" 
+                            class="w-full bg-gray-900 border border-gray-600 rounded-lg p-3 text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent">
                     </div>
+
+                    <!-- Ingreso en Euros -->
                     <div>
-                        <label class="block text-xs font-bold text-slate-400 mb-1">INGRESO (€)</label>
-                        <input type="number" id="euros" required min="1" step="0.1" placeholder="Ej: 5" class="w-full bg-slate-900 border border-slate-600 rounded-lg p-3 text-white font-bold focus:border-blue-500 focus:outline-none">
+                        <label for="ingreso" class="block text-sm font-medium text-gray-300 mb-1">Ingreso en Euros (€)</label>
+                        <input type="number" id="ingreso" required min="1" step="0.01" placeholder="Ej: 3" 
+                            class="w-full bg-gray-900 border border-gray-600 rounded-lg p-3 text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent">
                     </div>
-                </div>
 
-                <div>
-                    <label class="block text-xs font-bold text-slate-400 mb-1">TIPO DE BONO (Bloqueo)</label>
-                    <select id="bono" class="w-full bg-slate-900 border border-slate-600 rounded-lg p-3 text-white font-bold focus:border-blue-500 focus:outline-none">
-                        <option value="normal">NORMAL (Saldo x 10,000 | 150 Tiradas)</option>
-                        <option value="doble">BONO DOBLE (Saldo x 20,000 | 500 Tiradas)</option>
-                    </select>
-                </div>
+                    <!-- Promoción (Bono) -->
+                    <div>
+                        <label for="bono" class="block text-sm font-medium text-gray-300 mb-1">Elige la promoción</label>
+                        <select id="bono" required 
+                            class="w-full bg-gray-900 border border-gray-600 rounded-lg p-3 text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                            <option value="sin_bono">Sin Bono (Rollover: 150 tiradas)</option>
+                            <option value="con_bono">CON BONO DOBLE (Rollover: 500 tiradas)</option>
+                        </select>
+                    </div>
 
-                <button type="submit" id="btn-submit" class="w-full bg-blue-600 active:bg-blue-700 text-white font-black rounded-lg p-4 text-lg mt-2 transition-transform active:scale-95">
-                    CREAR JUGADOR
-                </button>
-            </form>
-
-            <!-- CAJA DEL ENLACE (Aparece al crear) -->
-            <div id="caja-enlace" class="hidden mt-4 p-4 bg-green-900/30 border border-green-500 rounded-lg">
-                <p class="text-green-400 font-bold text-sm mb-2">✅ JUGADOR CREADO. COPIA ESTE ENLACE:</p>
-                <input type="text" id="link-generado" readonly class="w-full bg-slate-950 text-green-400 border border-green-700 rounded p-3 font-mono text-sm select-all">
+                    <!-- Botón Crear -->
+                    <button type="submit" 
+                        class="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-3 px-4 rounded-lg shadow-[0_0_15px_rgba(37,99,235,0.5)] transition-all flex justify-center items-center">
+                        <span>Crear Jugador y Generar Link</span>
+                    </button>
+                </form>
             </div>
-        </section>
 
-        <!-- CAJA DE LISTA DE JUGADORES -->
-        <section>
-            <h2 class="text-xl font-black mb-4 text-white">👥 Jugadores Activos</h2>
-            <div id="lista-jugadores" class="space-y-4">
-                <p class="text-slate-500 text-center py-4">Cargando base de datos...</p>
+            <!-- TARJETA: DASHBOARD / LISTA DE USUARIOS (Derecha) -->
+            <div class="bg-gray-800 rounded-xl shadow-lg border border-gray-700 p-6 lg:col-span-2 overflow-hidden flex flex-col">
+                <div class="flex justify-between items-center mb-6 border-b border-gray-700 pb-2">
+                    <h2 class="text-xl font-bold text-white">Jugadores Activos</h2>
+                    <button onclick="fetchUsuarios()" class="text-sm bg-gray-700 hover:bg-gray-600 text-gray-300 px-3 py-1 rounded">Actualizar</button>
+                </div>
+                
+                <div class="overflow-x-auto">
+                    <table class="min-w-full text-left text-sm text-gray-300">
+                        <thead class="text-xs text-gray-400 uppercase bg-gray-900/50">
+                            <tr>
+                                <th class="px-4 py-3 rounded-tl-lg">Nombre</th>
+                                <th class="px-4 py-3">Código</th>
+                                <th class="px-4 py-3">Saldo Actual</th>
+                                <th class="px-4 py-3">Progreso Bono</th>
+                                <th class="px-4 py-3 rounded-tr-lg">Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody id="usuarios-tbody" class="divide-y divide-gray-700">
+                            <!-- Los usuarios se insertarán aquí con JS -->
+                            <tr><td colspan="5" class="text-center py-4 text-gray-500">Cargando jugadores...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
             </div>
-        </section>
 
-    </main>
+        </div>
+    </div>
 
+    <!-- LÓGICA JAVASCRIPT -->
     <script>
-        // --- 1. CONEXIÓN A SUPABASE ---
-        const URL = 'https://qutkwzjchchhbqfhtaxi.supabase.co';
-        const KEY = 'sb_publishable_fv4VSDx-LJrkorzY0bOKaA_0poFJcU1';
-        const supabase = window.supabase.createClient(URL, KEY);
+        // 1. CREDENCIALES DE SUPABASE
+        const { createClient } = supabase;
+        const supabaseUrl = 'https://qutkwzjchchhbqfhtaxi.supabase.co';
+        const supabaseKey = 'sb_publishable_fv4VSDx-LJrkorzY0bOKaA_0poFJcU1';
+        const supabaseClient = createClient(supabaseUrl, supabaseKey);
 
-        // --- 2. CARGAR JUGADORES (AL INSTANTE) ---
-        async function cargarJugadores() {
-            const contenedor = document.getElementById('lista-jugadores');
+        // 2. SEGURIDAD DEL PANEL (Prompt al iniciar)
+        document.addEventListener('DOMContentLoaded', () => {
+            const password = prompt('Introduzca la contraseña del panel administrativo:');
             
-            try {
-                // Hacemos la consulta ordenando por el más nuevo primero
-                const { data, error } = await supabase
-                    .from('usuarios')
-                    .select('*')
-                    .order('created_at', { ascending: false });
-
-                if (error) throw error;
-
-                if (data.length === 0) {
-                    contenedor.innerHTML = '<p class="text-slate-500 text-center py-4">No hay jugadores creados.</p>';
-                    return;
-                }
-
-                contenedor.innerHTML = ''; // Limpiamos la lista
-
-                // Dibujamos cada jugador
-                data.forEach(jugador => {
-                    let progreso = Math.min((jugador.tiradas_realizadas / jugador.tiradas_objetivo) * 100, 100).toFixed(1);
-
-                    contenedor.innerHTML += `
-                        <div class="bg-slate-800 border border-slate-700 rounded-xl p-4 shadow-lg">
-                            <div class="flex justify-between items-start mb-2">
-                                <h3 class="font-black text-xl text-white uppercase">${jugador.nombre}</h3>
-                                <span class="bg-slate-950 text-blue-400 px-2 py-1 rounded font-mono text-sm border border-slate-700">${jugador.codigo}</span>
-                            </div>
-                            
-                            <div class="mb-4 text-sm font-bold text-slate-300">
-                                <p class="flex justify-between mb-1"><span>Saldo:</span> <span class="text-green-400 text-lg">${jugador.saldo} pts</span></p>
-                                <p class="flex justify-between"><span>Tiradas:</span> <span>${jugador.tiradas_realizadas} / ${jugador.tiradas_objetivo}</span></p>
-                                <div class="w-full bg-slate-900 rounded-full h-2 mt-2">
-                                    <div class="bg-blue-500 h-2 rounded-full" style="width: ${progreso}%"></div>
-                                </div>
-                            </div>
-
-                            <div class="flex gap-2">
-                                <button onclick="recargar(${jugador.saldo}, '${jugador.id}')" class="flex-1 bg-green-600 active:bg-green-700 text-white font-black py-3 rounded-lg active:scale-95 transition-transform">
-                                    💵 +10K pts
-                                </button>
-                                <button onclick="borrarJugador('${jugador.id}')" class="bg-red-600 active:bg-red-700 text-white font-black px-4 rounded-lg active:scale-95 transition-transform">
-                                    🗑️ Borrar
-                                </button>
-                            </div>
-                        </div>
-                    `;
-                });
-            } catch (error) {
-                contenedor.innerHTML = `<p class="text-red-500 text-center font-bold">Error conectando a Supabase: ${error.message}</p>`;
-            }
-        }
-
-        // --- 3. CREAR JUGADOR ---
-        document.getElementById('form-crear').addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const btn = document.getElementById('btn-submit');
-            btn.innerText = "⏳ CREANDO...";
-            btn.disabled = true;
-
-            try {
-                const nombre = document.getElementById('nombre').value.trim();
-                const euros = parseFloat(document.getElementById('euros').value);
-                const tipoBono = document.getElementById('bono').value;
-
-                let saldo = euros * 10000;
-                let tiradas = 150;
-
-                if (tipoBono === 'doble') {
-                    saldo = euros * 20000; // Doble de pasta
-                    tiradas = 500; // Bloqueo de 500 tiradas
-                }
-
-                // Generar código aleatorio de 5 letras
-                const codigo = Math.random().toString(36).substring(2, 7).toUpperCase();
-
-                // Insertar en base de datos. IMPORTANTE: usamos .select() para confirmar que se ha guardado.
-                const { data, error } = await supabase
-                    .from('usuarios')
-                    .insert([{ codigo: codigo, nombre: nombre, saldo: saldo, tiradas_realizadas: 0, tiradas_objetivo: tiradas }])
-                    .select();
-
-                if (error) throw error;
-
-                // Generamos el Magic Link (Asumiendo que el juego está en index.html)
-                let rutaBase = window.location.origin + window.location.pathname.replace('admin.html', '');
-                if (!rutaBase.endsWith('/')) rutaBase += '/';
-                let enlace = `${rutaBase}index.html?codigo=${codigo}`;
-
-                document.getElementById('link-generado').value = enlace;
-                document.getElementById('caja-enlace').classList.remove('hidden');
-                
-                document.getElementById('form-crear').reset();
-                
-                // ¡LA MAGIA! Cargamos la lista de nuevo inmediatamente para que aparezca sin recargar la web
-                cargarJugadores();
-
-            } catch (error) {
-                alert("Error al crear: " + error.message);
-            } finally {
-                btn.innerText = "CREAR JUGADOR";
-                btn.disabled = false;
+            if (password === 'viaje2026') {
+                document.getElementById('app-container').style.display = 'block';
+                fetchUsuarios(); // Carga la tabla de inmediato
+            } else {
+                document.getElementById('auth-error').classList.remove('hidden');
+                document.body.style.backgroundColor = '#111827'; // Mantener fondo oscuro
             }
         });
 
-        // --- 4. RECARGAR SALDO ---
-        async function recargar(saldoActual, id) {
-            try {
-                const { error } = await supabase
-                    .from('usuarios')
-                    .update({ saldo: saldoActual + 10000 })
-                    .eq('id', id);
-
-                if (error) throw error;
-                
-                // Refrescamos al instante
-                cargarJugadores();
-            } catch (error) {
-                alert("Error al recargar: " + error.message);
+        // 3. GENERADOR DE CÓDIGO (5 caracteres alfanuméricos en mayúsculas)
+        function generarCodigoUnico() {
+            const caracteres = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+            let codigo = '';
+            for (let i = 0; i < 5; i++) {
+                codigo += caracteres.charAt(Math.floor(Math.random() * caracteres.length));
             }
+            return codigo;
         }
 
-        // --- 5. BORRAR JUGADOR (NUEVO) ---
-        async function borrarJugador(id) {
-            const confirmar = confirm("¿Estás seguro de que quieres BORRAR a este jugador?");
-            if (!confirmar) return;
+        // 4. LÓGICA DE CREACIÓN DE USUARIO (La trampa del Bono)
+        document.getElementById('createUserForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const btnSubmit = e.target.querySelector('button[type="submit"]');
+            btnSubmit.disabled = true;
+            btnSubmit.innerHTML = 'Creando...';
 
-            try {
-                const { error } = await supabase
-                    .from('usuarios')
-                    .delete()
-                    .eq('id', id);
+            // Capturar datos del formulario
+            const nombre = document.getElementById('nombre').value.trim();
+            const ingresoEuros = parseFloat(document.getElementById('ingreso').value);
+            const opcionBono = document.getElementById('bono').value;
 
-                if (error) throw error;
-                
-                // Refrescamos al instante
-                cargarJugadores();
-            } catch (error) {
-                alert("Error al borrar: " + error.message);
+            // Cálculos matemáticos requeridos
+            const codigo = generarCodigoUnico();
+            const puntos_base = ingresoEuros * 10000;
+            
+            let saldoFinal = 0;
+            let tiradasObjetivoFinal = 0;
+
+            if (opcionBono === 'sin_bono') {
+                saldoFinal = puntos_base;
+                tiradasObjetivoFinal = 150;
+            } else {
+                // Bono Doble
+                saldoFinal = puntos_base * 2;
+                tiradasObjetivoFinal = 500;
             }
+
+            // Inserción Asíncrona a Supabase
+            const { data, error } = await supabaseClient
+                .from('usuarios')
+                .insert([
+                    { 
+                        codigo: codigo, 
+                        nombre: nombre, 
+                        saldo: saldoFinal, 
+                        tiradas_realizadas: 0, 
+                        tiradas_objetivo: tiradasObjetivoFinal 
+                    }
+                ]);
+
+            if (error) {
+                alert('Error al crear el usuario en Supabase:\n' + error.message);
+            } else {
+                // Éxito: Generar Magic Link y mostrar alerta
+                const urlActual = window.location.origin; // O puedes quemar "tusitio.com" si lo prefieres
+                const magicLink = `tusitio.com/index.html?codigo=${codigo}`;
+                
+                document.getElementById('alert-box').innerHTML = `
+                    <div class="bg-green-600/20 border border-green-500 p-4 rounded-lg mb-6 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                        <div>
+                            <p class="text-green-400 font-bold mb-1">¡Usuario Creado con Éxito!</p>
+                            <p class="text-gray-200 text-sm break-all">Magic Link: <span class="font-mono text-white select-all">${magicLink}</span></p>
+                        </div>
+                        <button onclick="navigator.clipboard.writeText('https://${magicLink}'); alert('¡Link Copiado!');" 
+                            class="bg-green-600 hover:bg-green-500 text-white px-4 py-2 rounded shadow-lg transition-colors whitespace-nowrap text-sm font-bold">
+                            Copiar Link
+                        </button>
+                    </div>
+                `;
+                
+                e.target.reset(); // Limpiar formulario
+                fetchUsuarios();  // Actualizar tabla
+            }
+
+            btnSubmit.disabled = false;
+            btnSubmit.innerHTML = '<span>Crear Jugador y Generar Link</span>';
+        });
+
+        // 5. OBTENER Y PINTAR USUARIOS (Dashboard)
+        async function fetchUsuarios() {
+            const { data: usuarios, error } = await supabaseClient
+                .from('usuarios')
+                .select('*')
+                .order('id', { ascending: false });
+
+            const tbody = document.getElementById('usuarios-tbody');
+
+            if (error) {
+                tbody.innerHTML = `<tr><td colspan="5" class="text-center py-4 text-red-500">Error al cargar datos: ${error.message}</td></tr>`;
+                return;
+            }
+
+            if (usuarios.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="5" class="text-center py-8 text-gray-500">No hay jugadores creados aún.</td></tr>`;
+                return;
+            }
+
+            tbody.innerHTML = ''; // Limpiar
+
+            usuarios.forEach(user => {
+                const tr = document.createElement('tr');
+                tr.className = 'hover:bg-gray-700/50 transition-colors';
+                
+                // Formatear saldo con puntos de miles para que sea legible
+                const saldoFormateado = parseFloat(user.saldo).toLocaleString('es-ES');
+
+                tr.innerHTML = `
+                    <td class="px-4 py-4 font-medium text-white">${user.nombre}</td>
+                    <td class="px-4 py-4"><span class="bg-gray-900 border border-gray-600 px-2 py-1 rounded font-mono text-yellow-400 tracking-wider">${user.codigo}</span></td>
+                    <td class="px-4 py-4 font-bold text-blue-400">${saldoFormateado} pts</td>
+                    <td class="px-4 py-4 text-gray-300">
+                        ${user.tiradas_realizadas} / ${user.tiradas_objetivo}
+                        <div class="w-full bg-gray-900 rounded-full h-1.5 mt-2">
+                            <div class="bg-blue-500 h-1.5 rounded-full" style="width: ${Math.min((user.tiradas_realizadas / user.tiradas_objetivo) * 100, 100)}%"></div>
+                        </div>
+                    </td>
+                    <td class="px-4 py-4">
+                        <button onclick="recargarSaldoRapido(${user.id})" 
+                            class="bg-green-500 hover:bg-green-400 text-gray-900 font-extrabold py-1.5 px-3 rounded shadow-[0_0_10px_rgba(34,197,94,0.6)] transition-all text-xs whitespace-nowrap transform hover:scale-105 active:scale-95">
+                            +1€ (10.000 pts)
+                        </button>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
         }
 
-        // Ejecutar al abrir la página
-        window.addEventListener('DOMContentLoaded', cargarJugadores);
+        // 6. BOTÓN DE RECARGA RÁPIDA (+10.000 pts)
+        async function recargarSaldoRapido(userId) {
+            // Primero, obtenemos el saldo actual del usuario
+            const { data: userCurrent, error: fetchError } = await supabaseClient
+                .from('usuarios')
+                .select('saldo')
+                .eq('id', userId)
+                .single();
+
+            if (fetchError) {
+                alert('Error al leer saldo actual:\n' + fetchError.message);
+                return;
+            }
+
+            const nuevoSaldo = parseFloat(userCurrent.saldo) + 10000;
+
+            // Actualizamos el saldo
+            const { error: updateError } = await supabaseClient
+                .from('usuarios')
+                .update({ saldo: nuevoSaldo })
+                .eq('id', userId);
+
+            if (updateError) {
+                alert('Error al añadir saldo:\n' + updateError.message);
+            } else {
+                // Si va bien, volvemos a pintar la tabla para reflejar el cambio
+                fetchUsuarios();
+            }
+        }
     </script>
 </body>
 </html>
