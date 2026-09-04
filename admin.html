@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Dashboard Admin - Megafire Casino</title>
+    <title>Admin - Megafire Casino</title>
     
     <!-- Favicon de Ruleta -->
     <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🎰</text></svg>">
@@ -75,32 +75,30 @@
     </main>
 
     <script>
-        // --- 1. CONFIGURACIÓN SUPABASE ---
+        // --- 1. CONFIGURACIÓN SUPABASE (Tus credenciales exactas) ---
         const SUPABASE_URL = 'https://qutkwzjchchhbqfhtaxi.supabase.co';
         const SUPABASE_KEY = 'sb_publishable_fv4VSDx-LJrkorzY0bOKaA_0poFJcU1';
         const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
         // --- 2. LÓGICA DE CREACIÓN DE USUARIOS ---
         document.getElementById('create-user-form').addEventListener('submit', async (e) => {
-            e.preventDefault(); // Evitar que la página recargue al dar enter
+            e.preventDefault(); 
             
             const btn = document.getElementById('btn-crear');
             btn.disabled = true;
             btn.innerText = "⏳ GENERANDO...";
 
             try {
-                // Recoger valores del formulario
                 const nombre = document.getElementById('input-nombre').value.trim();
                 const euros = parseFloat(document.getElementById('input-euros').value);
                 const bono = document.getElementById('input-bono').value;
 
-                // Cálculos de saldo y rollover
                 let saldo_inicial = euros * 10000;
                 let tiradas_objetivo = 150;
 
                 if (bono === 'con_bono') {
-                    saldo_inicial *= 2; // Dobla el saldo
-                    tiradas_objetivo = 500; // Bloqueo más alto
+                    saldo_inicial *= 2; 
+                    tiradas_objetivo = 500; 
                 }
 
                 // Generar código aleatorio de 5 caracteres
@@ -119,19 +117,19 @@
 
                 if (error) throw error;
 
-                // Generar la URL para pasarla por WhatsApp
-                let currentPath = window.location.href;
-                let basePath = currentPath.substring(0, currentPath.lastIndexOf('/'));
-                const magicUrl = `${basePath}/index.html?codigo=${codigo}`;
+                // Generar URL dinámica limpia (cambia admin.html por index.html)
+                let currentUrl = window.location.origin + window.location.pathname;
+                let magicUrl = currentUrl.replace(/admin\.html$/, 'index.html') + '?codigo=' + codigo;
                 
-                // Mostrar la URL en pantalla
+                // Si la URL actual no acaba en admin.html (ej: raiz de vercel), añadimos /index.html
+                if (!currentUrl.endsWith('admin.html')) {
+                    magicUrl = window.location.origin + '/index.html?codigo=' + codigo;
+                }
+                
                 document.getElementById('magic-link-url').value = magicUrl;
                 document.getElementById('magic-link-container').classList.remove('hidden');
 
-                // Limpiar el formulario
                 document.getElementById('create-user-form').reset();
-                
-                // Actualizar la lista al instante
                 fetchUsers();
                 
             } catch (err) {
@@ -159,10 +157,9 @@
                     return;
                 }
 
-                container.innerHTML = ''; // Limpiar grilla
+                container.innerHTML = ''; 
 
                 usuarios.forEach(user => {
-                    // Calcular el progreso visual (%)
                     let progressRaw = (user.tiradas_realizadas / user.tiradas_objetivo) * 100;
                     let progress = Math.min(progressRaw, 100).toFixed(1);
 
@@ -184,18 +181,15 @@
                                 <span class="font-bold">Rollover:</span> 
                                 <span class="font-bold text-slate-800">${user.tiradas_realizadas} / ${user.tiradas_objetivo}</span>
                             </p>
-                            <!-- Barra de progreso miniatura -->
                             <div class="w-full bg-slate-200 rounded-full h-2.5 mt-2">
                                 <div class="bg-blue-500 h-2.5 rounded-full" style="width: ${progress}%"></div>
                             </div>
                         </div>
 
-                        <!-- Botón Recarga Rápida (Efectivo en mano) -->
                         <button onclick="recargarSaldo('${user.id}', ${user.saldo}, this)" class="mt-auto w-full bg-emerald-500 active:bg-emerald-600 text-white font-black py-3 px-4 rounded-xl transition-transform active:scale-95 shadow flex items-center justify-center text-lg gap-2">
                             💵 +10K pts (Recarga)
                         </button>
                     `;
-
                     container.appendChild(card);
                 });
             } catch (err) {
@@ -220,7 +214,6 @@
 
                 if (error) throw error;
 
-                // Actualizar la vista automáticamente sin recargar la página entera
                 fetchUsers();
             } catch (err) {
                 alert("❌ Error en la recarga: " + err.message);
@@ -230,8 +223,7 @@
             }
         }
 
-        // --- 5. ARRANCAR AL ABRIR LA PÁGINA ---
-        // Carga la lista de usuarios automáticamente sin pedir contraseñas
+        // Cargar usuarios al entrar
         window.addEventListener('DOMContentLoaded', fetchUsers);
     </script>
 </body>
