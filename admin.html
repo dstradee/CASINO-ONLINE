@@ -18,16 +18,16 @@
         
         <header class="mb-8">
             <h1 class="text-4xl font-extrabold text-white tracking-tight">Admin<span class="text-blue-500">Panel</span> 🎰</h1>
-            <p class="text-gray-400 mt-2">Gestión de jugadores, enlaces y saldos</p>
+            <p class="text-gray-400 mt-2">Gestión de jugadores, saldos y depósitos totales</p>
         </header>
 
         <!-- Contenedor Alertas (Se usa al crear usuario) -->
         <div id="alert-box"></div>
 
-        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <div class="grid grid-cols-1 xl:grid-cols-4 gap-8">
             
             <!-- TARJETA: FORMULARIO DE CREACIÓN (Izquierda) -->
-            <div class="bg-gray-800 rounded-xl shadow-lg border border-gray-700 p-6 lg:col-span-1 h-fit">
+            <div class="bg-gray-800 rounded-xl shadow-lg border border-gray-700 p-6 xl:col-span-1 h-fit">
                 <h2 class="text-xl font-bold text-white mb-6 border-b border-gray-700 pb-2">Nuevo Jugador</h2>
                 
                 <form id="createUserForm" class="space-y-5">
@@ -58,32 +58,37 @@
                     <!-- Botón Crear -->
                     <button type="submit" 
                         class="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-3 px-4 rounded-lg shadow-[0_0_15px_rgba(37,99,235,0.5)] transition-all flex justify-center items-center">
-                        <span>Crear Jugador y Generar Link</span>
+                        <span>Crear Jugador y Link</span>
                     </button>
                 </form>
             </div>
 
             <!-- TARJETA: DASHBOARD / LISTA DE USUARIOS (Derecha) -->
-            <div class="bg-gray-800 rounded-xl shadow-lg border border-gray-700 p-6 lg:col-span-2 overflow-hidden flex flex-col">
+            <div class="bg-gray-800 rounded-xl shadow-lg border border-gray-700 p-4 sm:p-6 xl:col-span-3 overflow-hidden flex flex-col">
                 <div class="flex justify-between items-center mb-6 border-b border-gray-700 pb-2">
                     <h2 class="text-xl font-bold text-white">Jugadores Activos</h2>
-                    <button onclick="fetchUsuarios()" class="text-sm bg-gray-700 hover:bg-gray-600 text-gray-300 px-3 py-1 rounded">🔄 Actualizar</button>
+                    <button onclick="fetchUsuarios()" class="text-sm bg-gray-700 hover:bg-gray-600 text-gray-300 px-4 py-2 rounded shadow-md transition-colors font-bold">
+                        🔄 Actualizar
+                    </button>
                 </div>
                 
-                <div class="overflow-x-auto">
+                <!-- Eliminamos overflow-x-auto para que funcionen bien las tarjetas en móvil -->
+                <div class="w-full">
                     <table class="min-w-full text-left text-sm text-gray-300">
-                        <thead class="text-xs text-gray-400 uppercase bg-gray-900/50">
+                        <!-- THEAD: Visible solo en pantallas medianas/grandes -->
+                        <thead class="hidden lg:table-header-group text-xs text-gray-400 uppercase bg-gray-900/50">
                             <tr>
                                 <th class="px-4 py-3 rounded-tl-lg">Nombre</th>
-                                <th class="px-4 py-3">Código y Link</th>
-                                <th class="px-4 py-3">Saldo Actual</th>
+                                <th class="px-4 py-3">Código / Link</th>
+                                <th class="px-4 py-3 text-green-400">T. Ingresado</th>
+                                <th class="px-4 py-3 text-blue-400">Saldo Actual</th>
                                 <th class="px-4 py-3">Bono</th>
                                 <th class="px-4 py-3 rounded-tr-lg">Acciones</th>
                             </tr>
                         </thead>
-                        <tbody id="usuarios-tbody" class="divide-y divide-gray-700">
-                            <!-- Los usuarios se insertarán aquí con JS -->
-                            <tr><td colspan="5" class="text-center py-4 text-gray-500">Cargando jugadores...</td></tr>
+                        <!-- TBODY: Tarjetas en móvil, Filas en PC -->
+                        <tbody id="usuarios-tbody" class="block lg:table-row-group">
+                            <tr><td colspan="6" class="text-center py-4 text-gray-500">Cargando jugadores...</td></tr>
                         </tbody>
                     </table>
                 </div>
@@ -102,12 +107,12 @@
 
         const CASINO_BASE_URL = 'https://casino-online-git-main-pabloestram-6438s-projects.vercel.app/';
 
-        // Cargar usuarios inmediatamente al abrir (sin contraseña)
+        // Cargar usuarios inmediatamente al abrir
         document.addEventListener('DOMContentLoaded', () => {
             fetchUsuarios();
         });
 
-        // 2. GENERADOR DE CÓDIGO (5 caracteres alfanuméricos)
+        // 2. GENERADOR DE CÓDIGO
         function generarCodigoUnico() {
             const caracteres = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
             let codigo = '';
@@ -117,7 +122,7 @@
             return codigo;
         }
 
-        // 3. LÓGICA DE CREACIÓN DE USUARIO
+        // 3. CREAR USUARIO
         document.getElementById('createUserForm').addEventListener('submit', async (e) => {
             e.preventDefault();
             
@@ -140,7 +145,8 @@
                 nombre: nombre, 
                 saldo: saldoFinal, 
                 tiradas_realizadas: 0, 
-                tiradas_objetivo: tiradasObjetivoFinal 
+                tiradas_objetivo: tiradasObjetivoFinal,
+                total_ingresado: ingresoEuros // <-- Guardamos el dinero real ingresado
             }]);
 
             if (error) {
@@ -165,10 +171,10 @@
             }
 
             btnSubmit.disabled = false;
-            btnSubmit.innerHTML = '<span>Crear Jugador y Generar Link</span>';
+            btnSubmit.innerHTML = '<span>Crear Jugador y Link</span>';
         });
 
-        // 4. OBTENER Y PINTAR USUARIOS
+        // 4. OBTENER Y PINTAR USUARIOS (Lógica Responsiva)
         async function fetchUsuarios() {
             const { data: usuarios, error } = await supabaseClient
                 .from('usuarios')
@@ -178,12 +184,12 @@
             const tbody = document.getElementById('usuarios-tbody');
 
             if (error) {
-                tbody.innerHTML = `<tr><td colspan="5" class="text-center py-4 text-red-500">Error: ${error.message}</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="6" class="text-center py-4 text-red-500">Error: ${error.message}</td></tr>`;
                 return;
             }
 
             if (usuarios.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="5" class="text-center py-8 text-gray-500">No hay jugadores activos.</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="6" class="text-center py-8 text-gray-500">No hay jugadores activos.</td></tr>`;
                 return;
             }
 
@@ -191,43 +197,72 @@
 
             usuarios.forEach(user => {
                 const tr = document.createElement('tr');
-                tr.className = 'hover:bg-gray-700/50 transition-colors border-b border-gray-700/50 last:border-0';
+                // En móvil (block), se comporta como una tarjeta. En escritorio (lg:table-row) como fila normal.
+                tr.className = 'block lg:table-row mb-6 lg:mb-0 bg-gray-900 lg:bg-transparent rounded-lg border border-gray-700 lg:border-0 lg:border-b lg:border-gray-700/50 hover:bg-gray-700/30 transition-colors p-4 lg:p-0 shadow-lg lg:shadow-none';
                 
                 const saldoFormateado = parseFloat(user.saldo).toLocaleString('es-ES');
+                const totalIngresado = user.total_ingresado !== null ? parseFloat(user.total_ingresado).toLocaleString('es-ES') : '0';
                 const magicLink = `${CASINO_BASE_URL}?codigo=${user.codigo}`;
 
                 tr.innerHTML = `
-                    <td class="px-4 py-4 font-medium text-white">
-                        ${user.nombre}
+                    <!-- Nombre -->
+                    <td class="flex justify-between items-center lg:table-cell py-2 lg:py-4 lg:px-4 border-b border-gray-700 lg:border-0">
+                        <span class="lg:hidden font-bold text-xs text-gray-400 uppercase">Nombre:</span>
+                        <span class="font-bold text-white text-base">${user.nombre}</span>
                     </td>
-                    <td class="px-4 py-4 flex items-center gap-2">
-                        <span class="bg-gray-900 border border-gray-600 px-2 py-1 rounded font-mono text-yellow-400 tracking-wider">${user.codigo}</span>
-                        <button onclick="copiarAlPortapapeles('${magicLink}')" title="Copiar Link Mágico" class="text-gray-400 hover:text-white transition-colors">
-                            📋
-                        </button>
+                    
+                    <!-- Link y Código -->
+                    <td class="flex justify-between items-center lg:table-cell py-2 lg:py-4 lg:px-4 border-b border-gray-700 lg:border-0">
+                        <span class="lg:hidden font-bold text-xs text-gray-400 uppercase">Código:</span>
+                        <div class="flex items-center gap-2">
+                            <span class="bg-gray-800 lg:bg-gray-900 border border-gray-600 px-2 py-1 rounded font-mono text-yellow-400 tracking-wider">${user.codigo}</span>
+                            <button onclick="copiarAlPortapapeles('${magicLink}')" title="Copiar Link Mágico" class="text-gray-400 hover:text-white transition-colors bg-gray-800 p-1.5 rounded lg:bg-transparent lg:p-0">
+                                📋
+                            </button>
+                        </div>
                     </td>
-                    <td class="px-4 py-4 font-bold text-blue-400">${saldoFormateado} pts</td>
-                    <td class="px-4 py-4 text-gray-300">
-                        ${user.tiradas_realizadas} / ${user.tiradas_objetivo}
-                        <div class="w-full bg-gray-900 rounded-full h-1.5 mt-2">
+                    
+                    <!-- Total Ingresado (NUEVO) -->
+                    <td class="flex justify-between items-center lg:table-cell py-2 lg:py-4 lg:px-4 border-b border-gray-700 lg:border-0">
+                        <span class="lg:hidden font-bold text-xs text-gray-400 uppercase">T. Ingresado:</span>
+                        <span class="font-bold text-green-400 text-base">${totalIngresado} €</span>
+                    </td>
+
+                    <!-- Saldo -->
+                    <td class="flex justify-between items-center lg:table-cell py-2 lg:py-4 lg:px-4 border-b border-gray-700 lg:border-0">
+                        <span class="lg:hidden font-bold text-xs text-gray-400 uppercase">Saldo:</span>
+                        <span class="font-bold text-blue-400 text-base">${saldoFormateado} pts</span>
+                    </td>
+
+                    <!-- Bono -->
+                    <td class="flex flex-col gap-1 lg:table-cell py-3 lg:py-4 lg:px-4 border-b border-gray-700 lg:border-0">
+                        <div class="flex justify-between lg:block">
+                            <span class="lg:hidden font-bold text-xs text-gray-400 uppercase">Progreso:</span>
+                            <span class="text-gray-300">${user.tiradas_realizadas} / ${user.tiradas_objetivo}</span>
+                        </div>
+                        <div class="w-full bg-gray-800 lg:bg-gray-900 rounded-full h-1.5 mt-1 lg:mt-2">
                             <div class="bg-blue-500 h-1.5 rounded-full" style="width: ${Math.min((user.tiradas_realizadas / user.tiradas_objetivo) * 100, 100)}%"></div>
                         </div>
                     </td>
-                    <td class="px-4 py-4">
-                        <div class="flex items-center gap-2">
-                            <!-- Recargar (Añadir Dinero) -->
-                            <button onclick="recargarSaldoPersonalizado(${user.id}, '${user.nombre}', ${user.saldo})" title="Añadir Dinero"
-                                class="bg-green-600 hover:bg-green-500 text-white font-bold py-1.5 px-3 rounded shadow transition-all text-xs">
-                                💰 + Euros
+
+                    <!-- Acciones -->
+                    <td class="pt-4 pb-2 lg:py-4 lg:px-4 flex flex-col lg:table-cell">
+                        <span class="lg:hidden font-bold text-xs text-gray-400 uppercase mb-3">Acciones Rápidas:</span>
+                        <div class="flex flex-wrap gap-2 justify-center lg:justify-start">
+                            <button onclick="recargarSaldoPersonalizado(${user.id}, '${user.nombre}', ${user.saldo}, ${user.total_ingresado || 0})" title="Añadir Dinero"
+                                class="flex-1 lg:flex-none bg-green-600 hover:bg-green-500 text-white font-bold py-2 px-3 rounded shadow transition-all text-xs">
+                                💰 Añadir
                             </button>
-                            <!-- Editar Nombre -->
+                            <button onclick="restarSaldoPersonalizado(${user.id}, '${user.nombre}', ${user.saldo}, ${user.total_ingresado || 0})" title="Restar Dinero por Error"
+                                class="flex-1 lg:flex-none bg-orange-600 hover:bg-orange-500 text-white font-bold py-2 px-3 rounded shadow transition-all text-xs">
+                                ➖ Restar
+                            </button>
                             <button onclick="editarNombre(${user.id}, '${user.nombre}')" title="Editar Nombre"
-                                class="bg-blue-600 hover:bg-blue-500 text-white font-bold py-1.5 px-2 rounded shadow transition-all text-xs">
+                                class="bg-blue-600 hover:bg-blue-500 text-white font-bold py-2 px-3 rounded shadow transition-all text-xs">
                                 ✏️
                             </button>
-                            <!-- Eliminar -->
                             <button onclick="eliminarUsuario(${user.id}, '${user.nombre}')" title="Eliminar Jugador"
-                                class="bg-red-600 hover:bg-red-500 text-white font-bold py-1.5 px-2 rounded shadow transition-all text-xs">
+                                class="bg-red-600 hover:bg-red-500 text-white font-bold py-2 px-3 rounded shadow transition-all text-xs">
                                 🗑️
                             </button>
                         </div>
@@ -237,39 +272,61 @@
             });
         }
 
-        // 5. FUNCIONES DE ACCIÓN RÁPIDA
+        // 5. ACCIONES RÁPIDAS
 
-        // Copiar enlace general
+        // Copiar Enlace
         function copiarAlPortapapeles(texto) {
             navigator.clipboard.writeText(texto).then(() => {
                 alert('¡Link copiado correctamente!\n' + texto);
             });
         }
 
-        // Recargar saldo personalizado
-        async function recargarSaldoPersonalizado(id, nombre, saldoActual) {
-            const inputEuros = prompt(`¿Cuántos EUROS quieres añadir al jugador ${nombre}?\n(Ejemplo: 2.5)\nRecuerda: 1€ = 10.000 pts`);
+        // Añadir dinero (Suma a Total Ingresado y Puntos)
+        async function recargarSaldoPersonalizado(id, nombre, saldoActual, totalActual) {
+            const inputEuros = prompt(`¿Cuántos EUROS REALES quieres añadir al jugador ${nombre}?\n(Ej: 2.5)`);
             
             if (inputEuros !== null && inputEuros.trim() !== '') {
-                const euros = parseFloat(inputEuros.replace(',', '.')); // Soporte para comas o puntos
+                const euros = parseFloat(inputEuros.replace(',', '.')); 
                 if (isNaN(euros) || euros <= 0) {
-                    alert('Por favor, introduce una cantidad válida mayor a 0.');
+                    alert('Cantidad inválida.');
                     return;
                 }
 
-                const puntosAAnyadir = euros * 10000;
-                const nuevoSaldo = parseFloat(saldoActual) + puntosAAnyadir;
+                const nuevoSaldo = parseFloat(saldoActual) + (euros * 10000);
+                const nuevoTotalIngresado = parseFloat(totalActual) + euros;
 
                 const { error } = await supabaseClient
                     .from('usuarios')
-                    .update({ saldo: nuevoSaldo })
+                    .update({ saldo: nuevoSaldo, total_ingresado: nuevoTotalIngresado })
                     .eq('id', id);
 
-                if (error) {
-                    alert('Error al añadir saldo:\n' + error.message);
-                } else {
-                    fetchUsuarios(); // Refrescar tabla
+                if (error) alert('Error:\n' + error.message);
+                else fetchUsuarios(); 
+            }
+        }
+
+        // Restar dinero (Resta de Total Ingresado y Puntos)
+        async function restarSaldoPersonalizado(id, nombre, saldoActual, totalActual) {
+            const inputEuros = prompt(`CORRECCIÓN: ¿Cuántos EUROS le quieres QUITAR a ${nombre}?\n\n(Se le restarán los puntos equivalentes y el dinero de su Total Ingresado)`);
+            
+            if (inputEuros !== null && inputEuros.trim() !== '') {
+                const eurosARestar = parseFloat(inputEuros.replace(',', '.')); 
+                if (isNaN(eurosARestar) || eurosARestar <= 0) {
+                    alert('Cantidad inválida.');
+                    return;
                 }
+
+                // Asegurarnos de que el saldo y el total no bajen de cero (math.max)
+                const nuevoSaldo = Math.max(0, parseFloat(saldoActual) - (eurosARestar * 10000));
+                const nuevoTotalIngresado = Math.max(0, parseFloat(totalActual) - eurosARestar);
+
+                const { error } = await supabaseClient
+                    .from('usuarios')
+                    .update({ saldo: nuevoSaldo, total_ingresado: nuevoTotalIngresado })
+                    .eq('id', id);
+
+                if (error) alert('Error:\n' + error.message);
+                else fetchUsuarios(); 
             }
         }
 
@@ -283,29 +340,17 @@
                     .update({ nombre: nuevoNombre.trim() })
                     .eq('id', id);
 
-                if (error) {
-                    alert('Error al editar nombre:\n' + error.message);
-                } else {
-                    fetchUsuarios();
-                }
+                if (error) alert('Error:\n' + error.message);
+                else fetchUsuarios();
             }
         }
 
         // Eliminar Usuario
         async function eliminarUsuario(id, nombre) {
-            const confirmar = confirm(`⚠️ ¿Estás seguro de que deseas ELIMINAR al jugador "${nombre}"?\nEsta acción no se puede deshacer y perderá su saldo y progreso.`);
-            
-            if (confirmar) {
-                const { error } = await supabaseClient
-                    .from('usuarios')
-                    .delete()
-                    .eq('id', id);
-
-                if (error) {
-                    alert('Error al eliminar jugador:\n' + error.message);
-                } else {
-                    fetchUsuarios();
-                }
+            if (confirm(`⚠️ ¿ELIMINAR al jugador "${nombre}" permanentemente?`)) {
+                const { error } = await supabaseClient.from('usuarios').delete().eq('id', id);
+                if (error) alert('Error:\n' + error.message);
+                else fetchUsuarios();
             }
         }
     </script>
