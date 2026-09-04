@@ -7,303 +7,229 @@
     
     <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🔥</text></svg>">
     <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- LIBRERÍAS AÑADIDAS PARA ANIMACIÓN E INTERACCIÓN -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <!-- GSAP: El estándar de la industria para animaciones físicas y easings realistas -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
 
     <style>
         :root {
             --red-num: #dc2626; --black-num: #18181b; --green-num: #16a34a;
             --fire-glow: #f97316; --fire-core: #fef08a;
-            --safe-bottom: env(safe-area-inset-bottom, 16px);
+            --safe-bottom: env(safe-area-inset-bottom, 12px);
         }
 
         body {
             user-select: none; -webkit-user-select: none; -webkit-touch-callout: none;
             overscroll-behavior-y: contain; background-color: #050505; color: white;
             font-family: ui-sans-serif, system-ui, -apple-system, sans-serif;
-            overflow: hidden; /* Evitar scroll general de página */
+            overflow: hidden; /* Prohíbe el scroll general. Todo encaja en 100dvh */
         }
 
-        /* VISTAS DINÁMICAS (Solo una visible a la vez) */
-        .view-section { display: none; flex-direction: column; height: 100%; width: 100%; animation: fade-in 0.3s ease; }
-        .view-section.active { display: flex; }
-        @keyframes fade-in { 0% { opacity: 0; } 100% { opacity: 1; } }
-
-        /* JACKPOTS Y CABECERA */
+        /* --- CABECERA Y JACKPOTS (Compacto Mobile) --- */
         .jackpot-row { background: linear-gradient(180deg, #18181b 0%, #09090b 100%); border-bottom: 1px solid #27272a; }
         .j-grand { text-shadow: 0 0 10px #facc15; animation: slow-pulse 2s infinite; }
         @keyframes slow-pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.7; } }
 
-        /* TABLERO MOBILE FIRST */
-        .board-container {
-            display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px;
-            padding: 8px; max-width: 450px; margin: 0 auto; width: 100%;
-            touch-action: none; /* BLOQUEA SCROLL PARA PERMITIR PINTAR */
+        /* --- RULETA FÍSICA Y DINÁMICA --- */
+        #roulette-zone { transition: height 0.4s ease, opacity 0.4s ease; }
+        .wheel-svg-container {
+            width: 100%; height: 100%; border-radius: 50%;
+            border: 4px solid #27272a; box-shadow: 0 0 30px rgba(0,0,0,0.9);
+            background: #111;
+        }
+        .wheel-pointer {
+            position: absolute; top: -5px; left: 50%; transform: translateX(-50%);
+            width: 0; height: 0; border-left: 10px solid transparent; border-right: 10px solid transparent;
+            border-top: 25px solid #facc15; z-index: 30; filter: drop-shadow(0 4px 5px rgba(0,0,0,1));
+        }
+
+        /* --- TABLERO MOBILE FIRST (COMPACTO) --- */
+        #board-zone { touch-action: none; /* Crucial: Permite pintar sin scrollear la página */ }
+        
+        .board-grid {
+            display: grid; grid-template-columns: repeat(3, 1fr); grid-template-rows: repeat(13, 1fr);
+            gap: 2px; width: 100%; height: 100%; max-width: 450px; margin: 0 auto;
         }
         
         .board-cell {
             position: relative; display: flex; align-items: center; justify-content: center;
-            font-size: 1.4rem; font-weight: 800; border-radius: 6px;
-            border: 1px solid rgba(255,255,255,0.1); cursor: pointer;
-            box-shadow: inset 0 0 10px rgba(0,0,0,0.5); aspect-ratio: 1.5;
-            transition: transform 0.1s, border-color 0.2s, box-shadow 0.2s;
+            font-size: 1.1rem; font-weight: 800; border-radius: 4px;
+            border: 1px solid rgba(255,255,255,0.15); box-shadow: inset 0 0 5px rgba(0,0,0,0.5);
+            transition: background 0.1s;
         }
         
         .cell-red { background: var(--red-num); }
         .cell-black { background: var(--black-num); }
-        .cell-green { background: var(--green-num); grid-column: 1 / span 3; min-height: 45px; aspect-ratio: auto; }
+        .cell-green { background: var(--green-num); grid-column: 1 / span 3; grid-row: 1; }
+        .cell-num { grid-row: span 1; }
 
-        /* ESTADOS DEL NÚMERO */
-        .cell-selected {
-            border: 2px solid #3b82f6; box-shadow: 0 0 15px rgba(59, 130, 246, 0.6), inset 0 0 10px rgba(0,0,0,0.5);
-            z-index: 5;
-        }
-        .cell-fire { animation: fire-ignite 1s alternate infinite; z-index: 6; }
+        /* ESTADOS DE LAS CELDAS */
+        .cell-selected { border: 2px solid #3b82f6; box-shadow: 0 0 10px rgba(59, 130, 246, 0.8), inset 0 0 10px rgba(0,0,0,0.5); z-index: 5; }
+        .cell-fire { animation: fire-ignite 0.8s alternate infinite; z-index: 6; }
         .cell-fire::before {
-            content: '🔥'; position: absolute; top: -12px; left: -10px; font-size: 1.4rem;
+            content: '🔥'; position: absolute; top: -10px; left: -10px; font-size: 1.2rem;
             filter: drop-shadow(0 2px 5px rgba(0,0,0,0.9)); z-index: 10;
         }
-        .cell-winner {
-            border: 3px solid white !important; transform: scale(1.1); z-index: 20;
-            box-shadow: 0 0 30px rgba(255,255,255,1) !important;
-        }
+        .cell-winner { border: 3px solid white !important; transform: scale(1.1); z-index: 20; box-shadow: 0 0 25px rgba(255,255,255,1) !important; }
         .board-dimmed .board-cell:not(.cell-winner):not(.cell-fire) { opacity: 0.3; filter: grayscale(80%); }
 
         @keyframes fire-ignite {
             0% { box-shadow: 0 0 5px var(--fire-glow); border-color: var(--fire-glow); }
-            100% { box-shadow: 0 0 20px var(--fire-glow), inset 0 0 15px var(--fire-core); border-color: var(--fire-core); }
+            100% { box-shadow: 0 0 15px var(--fire-glow), inset 0 0 15px var(--fire-core); border-color: var(--fire-core); }
         }
 
-        /* FICHAS APUESTAS (Dentro de la casilla) */
+        /* FICHAS APUESTAS */
         .chip-visual {
-            position: absolute; width: 32px; height: 32px;
+            position: absolute; width: 24px; height: 24px;
             background: radial-gradient(circle, #2563eb 0%, #1e3a8a 100%);
             border: 2px solid #93c5fd; border-radius: 50%;
             display: flex; align-items: center; justify-content: center;
-            font-size: 0.65rem; font-weight: 900; color: white;
-            box-shadow: 0 4px 8px rgba(0,0,0,0.8); pointer-events: none; z-index: 10;
-            animation: chip-drop 0.15s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-        }
-        @keyframes chip-drop { 0% { transform: scale(2); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
-
-        /* RULETA REALISTA (SVG + CSS3) */
-        .wheel-wrapper {
-            position: relative; width: 320px; height: 320px; margin: 2rem auto;
-            border-radius: 50%; box-shadow: 0 0 50px rgba(0,0,0,0.9);
-            background: #111;
-        }
-        .wheel-svg-container {
-            width: 100%; height: 100%; border-radius: 50%;
-            border: 6px solid #27272a; overflow: hidden;
-            /* La rotación de la rueda será controlada por JS */
-        }
-        .wheel-pointer {
-            position: absolute; top: -15px; left: 50%; transform: translateX(-50%);
-            width: 0; height: 0; border-left: 15px solid transparent; border-right: 15px solid transparent;
-            border-top: 35px solid #facc15; z-index: 30; filter: drop-shadow(0 4px 5px rgba(0,0,0,1));
-        }
-        /* La bola y su contenedor orbital */
-        .ball-orbit {
-            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-            border-radius: 50%; z-index: 20; pointer-events: none;
-        }
-        .roulette-ball {
-            position: absolute; top: 15px; left: 50%; transform: translateX(-50%);
-            width: 12px; height: 12px; background: radial-gradient(circle, #fff 0%, #d4d4d8 100%);
-            border-radius: 50%; box-shadow: 0 0 10px rgba(255,255,255,0.8), 0 5px 10px rgba(0,0,0,0.9);
-        }
-        .wheel-center-cap {
-            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
-            width: 140px; height: 140px; border-radius: 50%;
-            background: radial-gradient(circle, #3f3f46 0%, #000 100%);
-            border: 4px solid #f59e0b; z-index: 25; box-shadow: inset 0 0 20px rgba(0,0,0,1);
+            font-size: 0.55rem; font-weight: 900; color: white;
+            box-shadow: 0 3px 5px rgba(0,0,0,0.8); pointer-events: none; z-index: 10;
         }
 
-        /* MEGA FIRE BONUS 3x3 GRID */
-        .bonus-grid {
-            display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px;
-            width: 100%; max-width: 360px; margin: 0 auto;
+        /* --- MEGA FIRE BONUS GRID --- */
+        #bonus-zone {
+            position: absolute; inset: 0; background: radial-gradient(circle at center, rgba(69, 10, 10, 0.98) 0%, rgba(0, 0, 0, 0.98) 100%);
+            z-index: 100; display: none; flex-direction: column; justify-content: center; padding: 1rem;
         }
+        .bonus-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; width: 100%; max-width: 350px; margin: 0 auto; }
         .bonus-cell {
             aspect-ratio: 1; background: linear-gradient(135deg, #18181b 0%, #09090b 100%);
             border: 2px solid #3f3f46; border-radius: 8px; display: flex; align-items: center; justify-content: center;
-            box-shadow: inset 0 0 20px rgba(0,0,0,1); transition: all 0.3s;
+            box-shadow: inset 0 0 15px rgba(0,0,0,1); transition: transform 0.3s;
         }
         .bonus-cell.revealed {
             background: linear-gradient(135deg, #ea580c 0%, #9a3412 100%); border-color: #fde047;
-            box-shadow: 0 0 25px rgba(234, 88, 12, 0.4), inset 0 0 15px rgba(253, 224, 71, 0.2);
-            animation: cell-reveal 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+            box-shadow: 0 0 20px rgba(234, 88, 12, 0.5), inset 0 0 10px rgba(253, 224, 71, 0.3);
+            animation: cell-reveal 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
         }
         @keyframes cell-reveal { 0% { transform: scale(0.5); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
 
         /* UTILIDADES INFERIORES FIJAS */
-        .bottom-controls {
-            padding-bottom: var(--safe-bottom);
-        }
+        .bottom-controls { padding-bottom: var(--safe-bottom); }
+        .btn-active-chip { border-color: #3b82f6 !important; background-color: #1e3a8a !important; color: white !important; }
+        .btn-eraser-active { border-color: #ef4444 !important; background-color: #7f1d1d !important; color: white !important; }
     </style>
 </head>
 <body class="flex flex-col h-[100dvh] w-full bg-black">
 
-    <!-- PANTALLAS DE SISTEMA -->
+    <!-- PANTALLAS DE CARGA -->
     <div id="sys-loading" class="absolute inset-0 z-[200] bg-black flex flex-col items-center justify-center">
         <div class="text-5xl mb-4">🔥</div>
         <p class="text-orange-500 font-bold uppercase tracking-widest text-sm animate-pulse">Conectando Mesa...</p>
     </div>
-    <div id="sys-error" class="absolute inset-0 z-[200] bg-black flex flex-col items-center justify-center hidden">
-        <h1 class="text-red-600 text-3xl font-black uppercase">Acceso Denegado</h1>
-    </div>
-
-    <!-- CABECERA FIJA: JACKPOTS Y JUGADOR -->
-    <div class="jackpot-row flex justify-between px-2 py-1 flex-none z-10 w-full">
-        <div class="text-center w-1/4"><div class="text-[9px] text-green-400 font-bold uppercase">Mini</div><div class="text-xs font-black">x2</div></div>
-        <div class="text-center w-1/4 border-l border-zinc-800"><div class="text-[9px] text-blue-400 font-bold uppercase">Minor</div><div class="text-xs font-black">x5</div></div>
-        <div class="text-center w-1/4 border-l border-zinc-800"><div class="text-[9px] text-purple-400 font-bold uppercase">Major</div><div class="text-xs font-black">x20</div></div>
-        <div class="text-center w-1/4 border-l border-zinc-800"><div class="text-[9px] text-red-500 font-bold uppercase">Grand</div><div class="text-sm font-black text-yellow-400 j-grand">x100</div></div>
-    </div>
     
-    <header class="px-4 py-2 bg-zinc-900 flex-none flex justify-between items-center border-b border-zinc-800 w-full">
+    <!-- 1. CABECERA: JACKPOTS Y JUGADOR (Compacto) -->
+    <div class="jackpot-row flex justify-between px-2 py-1 flex-none z-10 w-full">
+        <div class="text-center w-1/4"><div class="text-[8px] text-green-400 font-bold uppercase">Mini</div><div class="text-xs font-black">x2</div></div>
+        <div class="text-center w-1/4 border-l border-zinc-800"><div class="text-[8px] text-blue-400 font-bold uppercase">Minor</div><div class="text-xs font-black">x5</div></div>
+        <div class="text-center w-1/4 border-l border-zinc-800"><div class="text-[8px] text-purple-400 font-bold uppercase">Major</div><div class="text-xs font-black">x20</div></div>
+        <div class="text-center w-1/4 border-l border-zinc-800"><div class="text-[8px] text-red-500 font-bold uppercase">Grand</div><div class="text-xs font-black text-yellow-400 j-grand">x100</div></div>
+    </div>
+    <header class="px-3 py-1.5 bg-zinc-900 flex-none flex justify-between items-center border-b border-zinc-800 w-full">
         <div class="flex flex-col">
-            <span class="text-[10px] text-zinc-500 uppercase font-bold tracking-widest">Jugador</span>
-            <span id="player-name" class="text-sm font-bold text-zinc-200">...</span>
+            <span class="text-[9px] text-zinc-500 uppercase font-bold">Jugador</span>
+            <span id="player-name" class="text-xs font-bold text-zinc-200">...</span>
         </div>
         <div class="flex flex-col items-end">
-            <span class="text-[10px] text-zinc-500 uppercase font-bold tracking-widest">Saldo Disponible</span>
-            <!-- BITS TEXT APPLIED HERE -->
-            <span id="player-balance" class="text-lg font-black text-white">0 <span class="text-xs text-zinc-400">bits</span></span>
+            <span class="text-[9px] text-zinc-500 uppercase font-bold">Saldo</span>
+            <span id="player-balance" class="text-base font-black text-white">0 <span class="text-[10px] text-zinc-400">bits</span></span>
         </div>
     </header>
 
-    <!-- ==========================================
-         VISTA 1: APUESTAS (TABLERO Y CONTROLES)
-         ========================================== -->
-    <div id="view-betting" class="view-section active">
-        
-        <!-- Estado Ronda -->
-        <div id="bet-status-banner" class="flex-none py-1 text-center bg-blue-900/40 border-b border-blue-500/50">
-            <span id="bet-status-text" class="text-xs font-black uppercase tracking-[0.2em] text-blue-400">Apuestas Abiertas</span>
+    <!-- 2. ZONA DE LA RULETA (Dinámica) -->
+    <div id="roulette-zone" class="flex-none flex flex-col items-center justify-center bg-zinc-950 w-full h-[80px] border-b border-zinc-800 relative">
+        <div id="phase-text" class="absolute top-2 text-[10px] font-black uppercase tracking-[0.2em] text-blue-400 z-40 bg-zinc-900/80 px-3 py-1 rounded-full">
+            APUESTAS ABIERTAS 00:15
         </div>
-
-        <!-- Área scrolleable central, pero el tablero es compacto -->
-        <main class="flex-1 overflow-y-auto w-full relative flex flex-col">
-            <div id="board-container" class="board-container">
-                <!-- Se inyecta por JS para control de Eventos -->
-            </div>
-            <div class="h-4"></div> <!-- Spacing bottom -->
-        </main>
-
-        <!-- Controles Inferiores Fijos -->
-        <div id="bet-controls-panel" class="bg-zinc-950 border-t border-zinc-800 px-3 pt-3 flex-none bottom-controls z-20">
-            
-            <!-- Fichas -->
-            <div class="flex justify-between gap-2 mb-3">
-                <button onclick="selectChip(100)" class="chip-btn bg-zinc-800 border-2 border-blue-500 rounded-lg py-2 flex-1 text-white font-bold text-sm">100</button>
-                <button onclick="selectChip(250)" class="chip-btn bg-zinc-900 border-2 border-zinc-700 rounded-lg py-2 flex-1 text-zinc-400 font-bold text-sm">250</button>
-                <button onclick="selectChip(500)" class="chip-btn bg-zinc-900 border-2 border-zinc-700 rounded-lg py-2 flex-1 text-zinc-400 font-bold text-sm">500</button>
-                <button onclick="selectChip(1000)" class="chip-btn bg-zinc-900 border-2 border-zinc-700 rounded-lg py-2 flex-1 text-zinc-400 font-bold text-sm">1K</button>
-            </div>
-
-            <!-- Resumen y Gestión Apuestas -->
-            <div class="flex justify-between items-end mb-3">
-                <div class="flex gap-2">
-                    <button onclick="undoBet()" class="bg-zinc-800 text-zinc-300 px-4 py-2 rounded text-sm font-bold uppercase active:scale-95 transition-transform">Deshacer</button>
-                    <button onclick="clearBets()" class="bg-zinc-800 text-zinc-300 px-4 py-2 rounded text-sm font-bold uppercase active:scale-95 transition-transform">Limpiar</button>
-                </div>
-                <div class="text-right">
-                    <span class="text-[10px] text-zinc-500 uppercase font-bold block mb-1">Apuesta Total</span>
-                    <span id="total-bet-display" class="text-xl font-black text-white">0 <span class="text-xs text-zinc-400">bits</span></span>
-                </div>
-            </div>
-            
-            <!-- BOTÓN GIRAR GIGANTE -->
-            <button id="btn-spin" onclick="closeBetsAndSpin()" class="w-full h-16 bg-zinc-800 rounded font-black text-zinc-500 uppercase tracking-widest border border-zinc-700 flex items-center justify-center transition-all mb-2" disabled>
-                Esperando apuesta...
-            </button>
+        <!-- Rueda SVG (Pequeña en apuestas, grande en giro) -->
+        <div id="wheel-wrapper" class="relative w-[120px] h-[120px] mt-4 transition-all duration-500" style="opacity: 0.5;">
+            <div class="wheel-pointer"></div>
+            <div id="wheel-svg-container" class="wheel-svg-container"></div>
         </div>
     </div>
 
-    <!-- ==========================================
-         VISTA 2: RULETA GIRANDO
-         ========================================== -->
-    <div id="view-wheel" class="view-section bg-zinc-950 relative">
-        
-        <div id="wheel-status-banner" class="flex-none py-2 text-center bg-orange-900/40 border-b border-orange-500/50 absolute top-0 w-full z-40">
-            <span id="wheel-status-text" class="text-sm font-black uppercase tracking-[0.2em] text-orange-400 animate-pulse">Girando...</span>
-        </div>
-
-        <div class="flex-1 flex flex-col items-center justify-center relative w-full mt-10">
-            <div class="wheel-wrapper">
-                <div class="wheel-pointer"></div>
-                <!-- Rueda SVG Inyectada -->
-                <div id="wheel-svg-container" class="wheel-svg-container"></div>
-                <!-- Órbita de la Bola -->
-                <div id="ball-orbit" class="ball-orbit">
-                    <div class="roulette-ball"></div>
-                </div>
-                <div class="wheel-center-cap"></div>
-            </div>
-            
-            <div id="wheel-result-display" class="absolute bottom-16 text-center w-full opacity-0 transition-opacity duration-500">
-                <span class="text-sm text-zinc-400 font-bold uppercase tracking-widest block mb-2">Resultado</span>
-                <span id="wheel-result-number" class="text-7xl font-black text-white drop-shadow-[0_0_20px_rgba(255,255,255,0.8)]">0</span>
-            </div>
+    <!-- 3. ZONA DEL TABLERO (Full Screen Mobile) -->
+    <div id="board-zone" class="flex-1 w-full p-2 bg-[#09090b] min-h-0">
+        <div id="board-container" class="board-grid">
+            <!-- Inyectado por JS para mantener el HTML limpio y estructurado -->
         </div>
     </div>
 
-    <!-- ==========================================
-         VISTA 3: MEGA FIRE BONUS
-         ========================================== -->
-    <div id="view-bonus" class="view-section bg-[radial-gradient(circle_at_center,_#450a0a_0%,_#000_100%)] relative">
+    <!-- 4. CONTROLES INFERIORES FIJOS -->
+    <div id="controls-zone" class="bg-zinc-950 border-t border-zinc-800 px-2 pt-2 flex-none bottom-controls z-20 w-full shadow-[0_-10px_20px_rgba(0,0,0,0.8)]">
         
-        <div class="flex-1 flex flex-col justify-center px-4">
-            
-            <!-- Cabecera Bonus -->
-            <div class="text-center mb-8">
-                <h2 class="text-5xl font-black text-transparent bg-clip-text bg-gradient-to-r from-yellow-400 to-red-500 uppercase filter drop-shadow-[0_0_15px_rgba(239,68,68,0.6)]">
-                    MEGA FIRE
-                </h2>
-                <p class="text-orange-300 font-bold tracking-[0.3em] uppercase text-xs mt-1">Bonus Game</p>
-            </div>
-            
-            <!-- Contexto de Partida -->
-            <div class="flex justify-between w-full max-w-[360px] mb-6 mx-auto bg-black/50 p-3 rounded-lg border border-red-900/50">
-                <div class="flex flex-col items-start">
-                    <span class="text-[10px] text-zinc-400 uppercase font-bold">Apuesta Base</span>
-                    <span id="bonus-base-bet" class="text-xl font-black text-white">0 <span class="text-xs">bits</span></span>
-                </div>
-                <div class="flex flex-col items-end">
-                    <span class="text-[10px] text-red-400 uppercase font-bold">Bonus Spins</span>
-                    <span id="bonus-spins-counter" class="text-3xl font-black text-white">3</span>
-                </div>
-            </div>
+        <!-- Fichas y Goma de Borrar -->
+        <div class="flex justify-between gap-1 mb-2">
+            <button onclick="setMode('bet', 100)" class="chip-btn btn-active-chip bg-zinc-800 border border-zinc-700 rounded py-1.5 flex-1 text-zinc-300 font-bold text-xs">100</button>
+            <button onclick="setMode('bet', 250)" class="chip-btn bg-zinc-800 border border-zinc-700 rounded py-1.5 flex-1 text-zinc-300 font-bold text-xs">250</button>
+            <button onclick="setMode('bet', 500)" class="chip-btn bg-zinc-800 border border-zinc-700 rounded py-1.5 flex-1 text-zinc-300 font-bold text-xs">500</button>
+            <button onclick="setMode('bet', 1000)" class="chip-btn bg-zinc-800 border border-zinc-700 rounded py-1.5 flex-1 text-zinc-300 font-bold text-xs">1K</button>
+            <button onclick="setMode('erase')" class="chip-btn bg-zinc-900 border border-zinc-700 rounded py-1.5 flex-none w-12 text-zinc-400 font-bold text-xs">🗑️</button>
+        </div>
 
-            <!-- Grid 3x3 -->
-            <div class="bonus-grid" id="bonus-grid">
-                <!-- Se inyecta por JS (9 celdas estructuradas) -->
+        <!-- Acciones -->
+        <div class="flex justify-between items-center mb-2 px-1">
+            <div class="flex gap-2">
+                <button onclick="undoBet()" class="bg-zinc-800 text-zinc-300 px-3 py-1.5 rounded text-[10px] font-bold uppercase active:scale-95">Deshacer</button>
+                <button onclick="clearBets()" class="bg-zinc-800 text-zinc-300 px-3 py-1.5 rounded text-[10px] font-bold uppercase active:scale-95">Limpiar</button>
             </div>
+            <div class="text-right">
+                <span class="text-[9px] text-zinc-500 uppercase font-bold block leading-none">Total</span>
+                <span id="total-bet-display" class="text-lg font-black text-white leading-none">0 <span class="text-[9px] text-zinc-400">bits</span></span>
+            </div>
+        </div>
+        
+        <!-- BOTÓN GIRAR (Gigante y seguro) -->
+        <button id="btn-spin" onclick="executeRound()" class="w-full h-14 bg-zinc-800 rounded font-black text-zinc-500 uppercase tracking-widest border border-zinc-700 flex items-center justify-center transition-all" disabled>
+            SELECCIONA APUESTA
+        </button>
+    </div>
 
-            <!-- Premio Actual -->
-            <div class="text-center mt-6">
-                <span class="text-[10px] text-yellow-500 uppercase font-bold tracking-widest block mb-1">Premio Actual</span>
-                <span id="bonus-current-win" class="text-3xl font-black text-green-400">0 bits</span>
+    <!-- 5. PANTALLA MEGA FIRE BONUS (Oculta por defecto) -->
+    <div id="bonus-zone">
+        <div class="text-center mb-6">
+            <h2 class="text-4xl font-black text-transparent bg-clip-text bg-gradient-to-r from-yellow-400 to-red-500 uppercase drop-shadow-[0_0_15px_rgba(239,68,68,0.8)]">
+                MEGA FIRE BONUS
+            </h2>
+        </div>
+        
+        <div class="flex justify-between w-full max-w-[350px] mb-4 mx-auto bg-black/60 p-3 rounded border border-red-900/50">
+            <div class="flex flex-col items-start">
+                <span class="text-[10px] text-zinc-400 uppercase font-bold">Apuesta Base</span>
+                <span id="bonus-base-bet" class="text-lg font-black text-white">0 <span class="text-[10px]">bits</span></span>
+            </div>
+            <div class="flex flex-col items-end">
+                <span class="text-[10px] text-red-400 uppercase font-bold">Spins</span>
+                <span id="bonus-spins-counter" class="text-2xl font-black text-white">3</span>
             </div>
         </div>
 
-        <!-- Pantalla Finalización Bonus -->
+        <div class="bonus-grid" id="bonus-grid">
+            <!-- Generado por JS -->
+        </div>
+
+        <div class="text-center mt-6">
+            <span class="text-[10px] text-yellow-500 uppercase font-bold tracking-widest block mb-1">Premio Actual</span>
+            <span id="bonus-current-win" class="text-3xl font-black text-green-400">0 bits</span>
+        </div>
+
         <div id="bonus-result-panel" class="absolute inset-0 bg-black/95 z-50 hidden flex-col items-center justify-center p-6">
-            <span class="text-sm text-yellow-500 font-bold uppercase tracking-[0.2em] mb-4">Bonus Completed</span>
-            <span class="text-xs text-zinc-400 font-bold uppercase mb-2">Total Win</span>
-            <span id="bonus-total-win" class="text-6xl font-black text-green-400 drop-shadow-[0_0_20px_#4ade80] mb-10">0 <span class="text-2xl">bits</span></span>
-            
-            <button onclick="returnToBoard()" class="w-full max-w-[280px] h-16 bg-gradient-to-r from-zinc-800 to-zinc-900 text-white font-black rounded-lg uppercase tracking-widest border border-zinc-600 active:scale-95 transition-transform">
-                Return to Roulette
+            <span class="text-sm text-yellow-500 font-bold uppercase tracking-[0.2em] mb-4">Bonus Completado</span>
+            <span class="text-xs text-zinc-400 font-bold uppercase mb-2">Premio Total</span>
+            <span id="bonus-total-win" class="text-5xl font-black text-green-400 drop-shadow-[0_0_20px_#4ade80] mb-8">0 <span class="text-xl">bits</span></span>
+            <button onclick="resetRound()" class="w-full max-w-[250px] h-14 bg-green-700 text-white font-black rounded uppercase tracking-widest active:scale-95">
+                Volver a Ruleta
             </button>
         </div>
     </div>
 
-    <!-- ==========================================
-         LÓGICA JAVASCRIPT
-         ========================================== -->
+    <!-- LÓGICA PRINCIPAL (Vanilla JS) -->
     <script>
-        /* --- 1. CONFIGURACIÓN SUPABASE (INTOCABLE) --- */
+        /* --- SUPABASE (INTOCABLE) --- */
         const { createClient } = supabase;
         const supabaseUrl = 'https://qutkwzjchchhbqfhtaxi.supabase.co';
         const supabaseKey = 'sb_publishable_fv4VSDx-LJrkorzY0bOKaA_0poFJcU1';
@@ -311,23 +237,22 @@
 
         let currentUser = null;
         
-        /* --- 2. CONSTANTES MATEMÁTICAS Y DE RULETA --- */
-        const ROULETTE_NUMS = [0,32,15,19,4,21,2,25,17,34,6,27,13,36,11,30,8,23,10,5,24,16,33,1,20,14,31,9,22,18,29,7,28,12,35,3,26];
-        const RED_NUMS = [1,3,5,7,9,12,14,16,18,19,21,23,25,27,30,32,34,36];
-        const SEGMENT_DEG = 360 / 37;
-        
-        /* --- 3. ESTADOS DE APUESTA --- */
-        let gameState = 'BETTING'; // BETTING, CLOSED, SPINNING, BONUS
+        /* --- ESTADOS Y CONSTANTES --- */
+        let gameState = 'BETTING'; // BETTING, CLOSED, SPINNING, RESULT, BONUS
+        let inputMode = 'bet'; // 'bet' o 'erase'
         let currentChip = 100;
-        let activeBets = {}; // { number: amount }
-        let betHistory = []; // [ { num, amount } ]
+        let activeBets = {}; // { 7: 100, 8: 250 }
+        let betHistory = []; // Para el botón deshacer
         let finalPrizeAmount = 0;
 
-        /* --- 4. INICIALIZACIÓN --- */
+        const ROULETTE_NUMS = [0,32,15,19,4,21,2,25,17,34,6,27,13,36,11,30,8,23,10,5,24,16,33,1,20,14,31,9,22,18,29,7,28,12,35,3,26];
+        const RED_NUMS = [1,3,5,7,9,12,14,16,18,19,21,23,25,27,30,32,34,36];
+
+        /* --- INICIALIZACIÓN --- */
         document.addEventListener('DOMContentLoaded', async () => {
-            buildMobileBoard();
+            buildBoard();
             buildSvgWheel();
-            setupPaintingEvents();
+            setupPointerEvents();
             
             const urlParams = new URLSearchParams(window.location.search);
             const codigo = urlParams.get('codigo');
@@ -346,41 +271,34 @@
 
         function updateBalanceUI() {
             document.getElementById('player-name').innerText = currentUser.nombre;
-            // Mostrando en formato "bits" como requirió el usuario.
-            document.getElementById('player-balance').innerHTML = `${parseFloat(currentUser.saldo).toLocaleString('es-ES')} <span class="text-xs text-zinc-400">bits</span>`;
+            document.getElementById('player-balance').innerHTML = `${parseFloat(currentUser.saldo).toLocaleString('es-ES')} <span class="text-[10px] text-zinc-400">bits</span>`;
         }
 
-        /* --- 5. CONSTRUCCIÓN DEL TABLERO (UX MÓVIL) --- */
-        function buildMobileBoard() {
+        /* --- CONSTRUCCIÓN DEL TABLERO MOBILE-FIRST --- */
+        function buildBoard() {
             const container = document.getElementById('board-container');
-            container.innerHTML = `<div class="board-cell cell-green" data-num="0" id="cell-0"><span>0</span></div>`;
+            container.innerHTML = `<div class="board-cell cell-green" data-num="0" id="cell-0">0</div>`;
             
-            // Números del 1 al 36. Vertical en 3 columnas.
             for(let row=0; row<12; row++) {
                 for(let col=1; col<=3; col++) {
                     const num = (row * 3) + col;
                     const isRed = RED_NUMS.includes(num);
-                    container.innerHTML += `
-                        <div class="board-cell ${isRed ? 'cell-red' : 'cell-black'}" data-num="${num}" id="cell-${num}">
-                            <span>${num}</span>
-                        </div>
-                    `;
+                    container.innerHTML += `<div class="board-cell cell-num ${isRed ? 'cell-red' : 'cell-black'}" data-num="${num}" id="cell-${num}">${num}</div>`;
                 }
             }
         }
 
-        /* --- 6. EVENTOS DE PINTAR APUESTAS (DRAG TO BET) --- */
+        /* --- EVENTOS TÁCTILES: PINTAR (DRAG & BET) SIN BUGS --- */
         let isPainting = false;
-        let paintedInCurrentStroke = new Set(); // Evita repeticiones en el mismo trazo
+        let paintedInStroke = new Set(); // Evita sumar 500 veces al mismo número si dejas el dedo quieto
 
-        function setupPaintingEvents() {
-            const board = document.getElementById('board-container');
+        function setupPointerEvents() {
+            const board = document.getElementById('board-zone');
             
-            // Pointer events cubren Touch, Mouse y Pen.
             board.addEventListener('pointerdown', (e) => {
                 if (gameState !== 'BETTING') return;
                 isPainting = true;
-                paintedInCurrentStroke.clear();
+                paintedInStroke.clear();
                 processPointer(e);
             });
 
@@ -389,112 +307,100 @@
                 processPointer(e);
             });
 
-            window.addEventListener('pointerup', () => {
-                if (isPainting) {
-                    isPainting = false;
-                    updateTotalBetUI();
-                }
-            });
-            // Por si el dedo sale del navegador
+            window.addEventListener('pointerup', () => { isPainting = false; });
             window.addEventListener('pointercancel', () => { isPainting = false; });
         }
 
         function processPointer(e) {
-            // Obtener elemento bajo el dedo
             const el = document.elementFromPoint(e.clientX, e.clientY);
             if (!el) return;
-            
-            // Buscar si es una celda o un hijo de la celda
             const cell = el.closest('.board-cell');
+            
             if (cell) {
                 const num = parseInt(cell.getAttribute('data-num'));
-                if (!paintedInCurrentStroke.has(num)) {
-                    paintedInCurrentStroke.add(num);
-                    placeBet(num);
+                if (!paintedInStroke.has(num)) {
+                    paintedInStroke.add(num);
+                    
+                    if (inputMode === 'bet') {
+                        activeBets[num] = (activeBets[num] || 0) + currentChip;
+                        betHistory.push({ type: 'add', num, amount: currentChip });
+                        if(navigator.vibrate) navigator.vibrate(10);
+                    } else if (inputMode === 'erase' && activeBets[num]) {
+                        betHistory.push({ type: 'erase', num, amount: activeBets[num] });
+                        delete activeBets[num];
+                        if(navigator.vibrate) navigator.vibrate(15);
+                    }
+                    updateBoardUI();
                 }
             }
         }
 
-        /* --- 7. GESTIÓN LÓGICA DE APUESTAS --- */
-        function selectChip(amount) {
+        /* --- GESTIÓN DE CONTROLES DE APUESTA --- */
+        function setMode(mode, val = null) {
             if(gameState !== 'BETTING') return;
-            currentChip = amount;
+            inputMode = mode;
+            if(val) currentChip = val;
+            
             document.querySelectorAll('.chip-btn').forEach(btn => {
-                const val = parseInt(btn.innerText.replace('1K', '1000'));
-                if (val === amount) {
-                    btn.classList.replace('bg-zinc-900', 'bg-zinc-800');
-                    btn.classList.replace('border-zinc-700', 'border-blue-500');
-                    btn.classList.replace('text-zinc-400', 'text-white');
-                } else {
-                    btn.classList.replace('bg-zinc-800', 'bg-zinc-900');
-                    btn.classList.replace('border-blue-500', 'border-zinc-700');
-                    btn.classList.replace('text-white', 'text-zinc-400');
-                }
+                btn.classList.remove('btn-active-chip', 'btn-eraser-active');
+                if (mode === 'bet' && parseInt(btn.innerText.replace('1K','1000')) === val) btn.classList.add('btn-active-chip');
+                if (mode === 'erase' && btn.innerText === '🗑️') btn.classList.add('btn-eraser-active');
             });
-        }
-
-        function placeBet(num) {
-            if(gameState !== 'BETTING') return;
-            
-            activeBets[num] = (activeBets[num] || 0) + currentChip;
-            betHistory.push({ num, amount: currentChip });
-            
-            renderChipsOnBoard();
-            updateTotalBetUI();
-            if (navigator.vibrate) navigator.vibrate(10);
         }
 
         function undoBet() {
             if(gameState !== 'BETTING' || betHistory.length === 0) return;
-            const last = betHistory.pop();
-            activeBets[last.num] -= last.amount;
-            if (activeBets[last.num] <= 0) delete activeBets[last.num];
+            const action = betHistory.pop();
             
-            renderChipsOnBoard();
-            updateTotalBetUI();
+            if (action.type === 'add') {
+                activeBets[action.num] -= action.amount;
+                if (activeBets[action.num] <= 0) delete activeBets[action.num];
+            } else if (action.type === 'erase') {
+                activeBets[action.num] = action.amount; // Restaurar la apuesta borrada
+            }
+            updateBoardUI();
         }
 
         function clearBets() {
             if(gameState !== 'BETTING') return;
             activeBets = {}; betHistory = [];
-            renderChipsOnBoard(); updateTotalBetUI();
+            updateBoardUI();
         }
 
-        function renderChipsOnBoard() {
-            // Reset styles
+        function updateBoardUI() {
+            // Limpiar visuales
             document.querySelectorAll('.board-cell').forEach(c => {
                 c.classList.remove('cell-selected');
-                const existingChip = c.querySelector('.chip-visual');
-                if (existingChip) existingChip.remove();
+                const chip = c.querySelector('.chip-visual');
+                if (chip) chip.remove();
             });
             
+            let total = 0;
             for (const [num, amount] of Object.entries(activeBets)) {
+                total += amount;
                 const cell = document.getElementById(`cell-${num}`);
                 if (cell) {
                     cell.classList.add('cell-selected');
-                    let valTxt = amount >= 1000 ? (amount/1000)+'K' : amount;
-                    cell.innerHTML += `<div class="chip-visual">${valTxt}</div>`;
+                    let txt = amount >= 1000 ? (amount/1000)+'K' : amount;
+                    cell.innerHTML += `<div class="chip-visual">${txt}</div>`;
                 }
             }
-        }
 
-        function updateTotalBetUI() {
-            const total = Object.values(activeBets).reduce((a, b) => a + b, 0);
-            document.getElementById('total-bet-display').innerHTML = `${total.toLocaleString()} <span class="text-xs text-zinc-400">bits</span>`;
+            document.getElementById('total-bet-display').innerHTML = `${total.toLocaleString()} <span class="text-[9px] text-zinc-400">bits</span>`;
             
             const btn = document.getElementById('btn-spin');
             if (total > 0) {
                 btn.disabled = false;
-                btn.className = 'w-full h-16 bg-gradient-to-b from-green-600 to-green-800 rounded-lg font-black text-white uppercase tracking-widest border border-green-500 shadow-[0_5px_0_#14532d] active:shadow-[0_0px_0_#14532d] active:translate-y-[5px] flex items-center justify-center transition-all mb-2';
-                btn.innerText = 'GIRAR';
+                btn.className = 'w-full h-14 bg-gradient-to-r from-green-600 to-green-700 rounded font-black text-white uppercase tracking-widest border border-green-500 shadow-[0_4px_0_#166534] active:shadow-[0_0_0_#166534] active:translate-y-[4px] flex items-center justify-center transition-all';
+                btn.innerText = 'CERRAR Y GIRAR';
             } else {
                 btn.disabled = true;
-                btn.className = 'w-full h-16 bg-zinc-800 rounded-lg font-black text-zinc-500 uppercase tracking-widest border border-zinc-700 flex items-center justify-center transition-all mb-2';
-                btn.innerText = 'Esperando apuesta...';
+                btn.className = 'w-full h-14 bg-zinc-800 rounded font-black text-zinc-500 uppercase tracking-widest border border-zinc-700 flex items-center justify-center transition-all';
+                btn.innerText = 'SELECCIONA APUESTA';
             }
         }
 
-        /* --- 8. LÓGICA MATEMÁTICA (INTOCABLE, COPIA EXACTA) --- */
+        /* --- LÓGICA MATEMÁTICA INTACTA --- */
         function getResultadoTirada(tiradas) {
             const rand = Math.random();
             let mult = 0; let tipo = '';
@@ -512,74 +418,10 @@
             return { mult, tipo };
         }
 
-        /* --- 9. SECUENCIA DEL JUEGO: CIERRE Y REVEAL FIRE --- */
-        async function closeBetsAndSpin() {
-            const totalBet = Object.values(activeBets).reduce((a, b) => a + b, 0);
-            if (totalBet <= 0 || gameState !== 'BETTING') return;
-            if (currentUser.saldo < totalBet) return alert('Saldo insuficiente.');
-
-            // 1. Bloquear Tablero
-            gameState = 'CLOSED';
-            document.getElementById('bet-status-banner').innerHTML = `<span class="text-xs font-black uppercase tracking-[0.2em] text-red-500">APUESTAS CERRADAS</span>`;
-            
-            const btn = document.getElementById('btn-spin');
-            btn.disabled = true;
-            btn.className = 'w-full h-16 bg-zinc-800 rounded-lg font-black text-zinc-600 uppercase tracking-widest border border-zinc-700 flex items-center justify-center mb-2';
-            btn.innerText = 'PROCESANDO...';
-
-            document.getElementById('board-container').parentElement.classList.add('board-dimmed');
-
-            // 2. Lógica Backend Intacta (Cobro Inmediato)
-            currentUser.saldo -= totalBet;
-            currentUser.tiradas_realizadas += 1;
-            updateBalanceUI();
-
-            const { mult, tipo } = getResultadoTirada(currentUser.tiradas_realizadas);
-            
-            // 3. Emparejamiento Visual -> Resultado
-            let resultNumber = null;
-            const userNumbers = Object.keys(activeBets).map(Number);
-            
-            if (mult > 0) {
-                // Obligatoriamente gana
-                resultNumber = userNumbers[Math.floor(Math.random() * userNumbers.length)];
-            } else {
-                // Obligatoriamente pierde
-                const availableLosses = ROULETTE_NUMS.filter(n => !userNumbers.includes(n));
-                resultNumber = availableLosses.length > 0 ? availableLosses[Math.floor(Math.random() * availableLosses.length)] : 0;
-            }
-
-            // Seleccionamos 5 Fire Numbers (Asegurando que el resultado está si hay premio)
-            let fireNumbers = [];
-            if (mult > 0) fireNumbers.push(resultNumber);
-            while(fireNumbers.length < 5) {
-                let r = Math.floor(Math.random() * 37);
-                if(!fireNumbers.includes(r)) fireNumbers.push(r);
-            }
-
-            // 4. ANIMACIÓN FIRE NUMBERS EN EL TABLERO
-            document.getElementById('bet-status-banner').innerHTML = `<span class="text-xs font-black uppercase tracking-[0.2em] text-orange-500 animate-pulse">🔥 FIRE NUMBERS 🔥</span>`;
-            await new Promise(r => setTimeout(r, 500));
-            
-            for (let num of fireNumbers) {
-                document.getElementById(`cell-${num}`).classList.add('cell-fire');
-                if (navigator.vibrate) navigator.vibrate(20);
-                await new Promise(r => setTimeout(r, 300));
-            }
-            await new Promise(r => setTimeout(r, 800));
-
-            // 5. PASAR A LA VISTA RULETA
-            executeSpinAnimation(resultNumber, mult, tipo, fireNumbers, totalBet);
-        }
-
-        /* --- 10. GENERACIÓN SVG RULETA (Hiperrealista pero ligera) --- */
+        /* --- CONSTRUCCIÓN RULETA SVG --- */
         function buildSvgWheel() {
             const container = document.getElementById('wheel-svg-container');
             let svg = `<svg viewBox="0 0 100 100" width="100%" height="100%">`;
-            // Un círculo de base
-            svg += `<circle cx="50" cy="50" r="50" fill="#111" />`;
-            
-            // Dibujar cada segmento (360/37 grados)
             const angle = 360 / 37;
             const rad = Math.PI / 180;
             
@@ -592,10 +434,8 @@
                 let y2 = 50 - 50 * Math.cos(endAngle * rad);
                 
                 let color = (num === 0) ? '#16a34a' : (i % 2 === 0 ? '#171717' : '#dc2626');
+                svg += `<path d="M50,50 L${x1},${y1} A50,50 0 0,1 ${x2},${y2} Z" fill="${color}" stroke="#000" stroke-width="0.3"/>`;
                 
-                svg += `<path d="M50,50 L${x1},${y1} A50,50 0 0,1 ${x2},${y2} Z" fill="${color}" stroke="#000" stroke-width="0.2"/>`;
-                
-                // Texto SVG rotado
                 let textAngle = i * angle;
                 svg += `<text x="50" y="8" fill="#fff" font-size="4" font-weight="bold" font-family="sans-serif" text-anchor="middle" transform="rotate(${textAngle}, 50, 50)">${num}</text>`;
             });
@@ -603,89 +443,125 @@
             container.innerHTML = svg;
         }
 
-        /* --- 11. ANIMACIÓN DE GIRO FÍSICO REAL --- */
-        let currentWheelRot = 0;
-        let currentBallRot = 0;
+        /* --- FASE: EJECUTAR RONDA --- */
+        async function executeRound() {
+            const totalBet = Object.values(activeBets).reduce((a, b) => a + b, 0);
+            if (totalBet <= 0 || gameState !== 'BETTING') return;
+            if (currentUser.saldo < totalBet) return alert('Saldo insuficiente.');
 
-        async function executeSpinAnimation(resultNumber, mult, tipo, fireNumbers, totalBet) {
-            switchView('view-wheel');
-            gameState = 'SPINNING';
+            // 1. CERRAR APUESTAS
+            gameState = 'CLOSED';
+            const phaseText = document.getElementById('phase-text');
+            phaseText.innerText = 'APUESTAS CERRADAS';
+            phaseText.className = 'absolute top-2 text-[10px] font-black uppercase tracking-[0.2em] text-red-500 z-40 bg-zinc-900/80 px-3 py-1 rounded-full';
             
-            const statusText = document.getElementById('wheel-status-text');
-            const resultDisplay = document.getElementById('wheel-result-display');
-            resultDisplay.style.opacity = '0';
-            statusText.innerText = "GIRANDO...";
-            statusText.className = "text-sm font-black uppercase tracking-[0.2em] text-orange-400 animate-pulse";
+            document.getElementById('btn-spin').disabled = true;
+            document.getElementById('board-zone').classList.add('board-dimmed');
 
-            const wheel = document.getElementById('wheel-svg-container');
-            const ballOrbit = document.getElementById('ball-orbit');
+            // 2. LÓGICA BACKEND (Cobro Inmediato)
+            currentUser.saldo -= totalBet;
+            currentUser.tiradas_realizadas += 1;
+            updateBalanceUI();
+
+            const { mult, tipo } = getResultadoTirada(currentUser.tiradas_realizadas);
             
-            // Cálculos Angulares
+            // 3. DETERMINAR RESULTADO EXACTO (CUMPLIENDO LA LÓGICA)
+            let resultNumber = null;
+            const userNumbers = Object.keys(activeBets).map(Number);
+            
+            if (mult > 0) {
+                // Ganador. El resultado debe ser de la lista del usuario.
+                resultNumber = userNumbers[Math.floor(Math.random() * userNumbers.length)];
+            } else {
+                // Perdedor. El resultado no debe ser del usuario.
+                const availableLosses = ROULETTE_NUMS.filter(n => !userNumbers.includes(n));
+                resultNumber = availableLosses[Math.floor(Math.random() * availableLosses.length)];
+            }
+
+            // Fire Numbers
+            let fireNumbers = [resultNumber]; // Aseguramos que el resultado sea fuego si toca.
+            while(fireNumbers.length < 5) {
+                let r = Math.floor(Math.random() * 37);
+                if(!fireNumbers.includes(r)) fireNumbers.push(r);
+            }
+
+            // 4. REVELAR FIRE NUMBERS
+            phaseText.innerText = '🔥 FIRE NUMBERS 🔥';
+            phaseText.classList.replace('text-red-500', 'text-orange-500');
+            await new Promise(r => setTimeout(r, 400));
+            
+            for (let num of fireNumbers) {
+                document.getElementById(`cell-${num}`).classList.add('cell-fire');
+                if (navigator.vibrate) navigator.vibrate(20);
+                await new Promise(r => setTimeout(r, 200));
+            }
+
+            // 5. INICIAR GIRO (ANIMACIÓN GSAP)
+            phaseText.innerText = 'GIRANDO...';
+            phaseText.classList.add('animate-pulse');
+            
+            // Expandir ruleta visualmente
+            const rZone = document.getElementById('roulette-zone');
+            rZone.style.height = '280px';
+            document.getElementById('wheel-wrapper').style.width = '240px';
+            document.getElementById('wheel-wrapper').style.height = '240px';
+            document.getElementById('wheel-wrapper').style.opacity = '1';
+
+            // Usando GSAP para rotación hiperrealista
             const targetIndex = ROULETTE_NUMS.indexOf(resultNumber);
-            // La rueda gira en positivo (horario)
-            const angleToTargetWheel = 360 - (targetIndex * SEGMENT_DEG); 
-            const spins = 10; // 10 vueltas
-            
-            currentWheelRot += (spins * 360) + angleToTargetWheel - (currentWheelRot % 360);
-            
-            // La bola gira en negativo (antihorario) y debe acabar cayendo en "0 grados" (arriba) para coincidir con la rueda.
-            // Para simular caídas, la bola da muchas vueltas y termina en 0.
-            currentBallRot -= (12 * 360) - (currentBallRot % 360);
+            const targetAngle = 360 - (targetIndex * SEGMENT_DEG); 
+            const totalRotation = (360 * 10) + targetAngle; // 10 vueltas completas
 
-            // APLICAR FÍSICAS CSS
-            // cubic-bezier(0.1, 0.7, 0.1, 1) da una sensación perfecta de fricción mecánica
-            wheel.style.transition = 'transform 6s cubic-bezier(0.1, 0.7, 0.1, 1)';
-            wheel.style.transform = `rotate(${currentWheelRot}deg)`;
+            gsap.to("#wheel-svg-container", {
+                rotation: totalRotation,
+                duration: 6,
+                ease: "power2.inOut",
+                onComplete: () => showResult(resultNumber, mult, tipo, totalBet)
+            });
+        }
 
-            ballOrbit.style.transition = 'transform 6s cubic-bezier(0.2, 0.9, 0.2, 1)';
-            ballOrbit.style.transform = `rotate(${currentBallRot}deg)`;
-
-            // Esperar que frene
-            await new Promise(r => setTimeout(r, 6200));
-
-            // FASE RESULTADO VISUAL
-            document.getElementById('wheel-result-number').innerText = resultNumber;
-            resultDisplay.style.opacity = '1';
-            
+        /* --- FASE: RESULTADO --- */
+        async function showResult(resultNumber, mult, tipo, totalBet) {
+            gameState = 'RESULT';
             if (navigator.vibrate) navigator.vibrate([100, 50, 100]);
+            
+            const phaseText = document.getElementById('phase-text');
+            document.getElementById(`cell-${resultNumber}`).classList.add('cell-winner');
 
             if (mult > 0) {
-                // FUEGO!
-                statusText.innerText = `🔥 FIRE NUMBER ${resultNumber} 🔥`;
-                statusText.className = "text-lg font-black uppercase tracking-widest text-red-500 animate-pulse drop-shadow-[0_0_10px_#ef4444]";
-                await new Promise(r => setTimeout(r, 2500));
+                phaseText.innerText = `🔥 RESULTADO: ${resultNumber} 🔥`;
+                phaseText.className = 'absolute top-2 text-[14px] font-black uppercase tracking-[0.2em] text-red-500 z-40 bg-zinc-900/90 px-4 py-2 rounded-full drop-shadow-[0_0_10px_#ef4444]';
+                await new Promise(r => setTimeout(r, 2000));
+                
+                // Entrar al Bonus
                 startBonusGame(totalBet, mult, tipo);
             } else {
-                // PERDIDA
-                statusText.innerText = `RESULTADO: ${resultNumber}`;
-                statusText.className = "text-lg font-black uppercase tracking-widest text-white";
+                phaseText.innerText = `RESULTADO: ${resultNumber}`;
+                phaseText.className = 'absolute top-2 text-[12px] font-black uppercase tracking-[0.2em] text-zinc-300 z-40 bg-zinc-900/90 px-4 py-2 rounded-full';
                 await new Promise(r => setTimeout(r, 2500));
                 
                 finalPrizeAmount = 0;
-                finishRound();
+                resetRound();
             }
         }
 
-        /* --- 12. PANTALLA DE BONUS GAME --- */
+        /* --- FASE: MEGA FIRE BONUS --- */
         function startBonusGame(totalBet, mult, tipo) {
             gameState = 'BONUS';
-            switchView('view-bonus');
-            finalPrizeAmount = totalBet * mult;
+            finalPrizeAmount = totalBet * mult; // La matemática dicta el resultado final
             
-            document.getElementById('bonus-base-bet').innerHTML = `${totalBet.toLocaleString()} <span class="text-xs">bits</span>`;
+            document.getElementById('bonus-zone').style.display = 'flex';
+            document.getElementById('bonus-base-bet').innerHTML = `${totalBet.toLocaleString()} <span class="text-[10px]">bits</span>`;
             document.getElementById('bonus-current-win').innerText = `0 bits`;
-            document.getElementById('bonus-result-panel').classList.add('hidden');
-            document.getElementById('bonus-result-panel').classList.remove('flex');
             
-            // Construir Cuadrícula 3x3
             const grid = document.getElementById('bonus-grid');
             grid.innerHTML = '';
             for(let i=0; i<9; i++) grid.innerHTML += `<div class="bonus-cell" id="bcell-${i}"></div>`;
 
-            // Estructurar qué cae según la matemática real (Contexto visual puro)
+            // Configurar los multiplicadores visuales (Contextualizados a la ganancia real)
             let drops = [];
             if (tipo === 'false-win') drops = [ {val: `x0.3`, style: 'text-white text-3xl'} ];
-            else if (tipo === 'win-normal') drops = [ {val: 'x1', style: 'text-white text-2xl'}, {val: 'x0.2', style: 'text-white text-xl'} ];
+            else if (tipo === 'win-normal') drops = [ {val: 'x0.7', style: 'text-white text-2xl'}, {val: 'x0.5', style: 'text-white text-2xl'} ];
             else if (tipo === 'win-mega') drops = [ {val: 'x2', style: 'text-white text-3xl'}, {val: 'x1', style: 'text-white text-xl'}, {val: 'MINI', style: 'text-green-400 text-3xl drop-shadow-[0_0_10px_#4ade80]'} ];
 
             let spinCount = 3;
@@ -696,19 +572,18 @@
             const interval = setInterval(() => {
                 spinCount--;
                 document.getElementById('bonus-spins-counter').innerText = spinCount;
-                if (navigator.vibrate) navigator.vibrate(20);
+                if (navigator.vibrate) navigator.vibrate(30);
 
                 if (dropIndex < drops.length && spinCount > 0) {
                     const cell = document.getElementById(`bcell-${availableCells[dropIndex]}`);
                     cell.classList.add('revealed');
                     cell.innerHTML = `<span class="font-black ${drops[dropIndex].style}">${drops[dropIndex].val}</span>`;
                     
-                    // Simular subida de premio (solo visual)
                     accumulatedWin = (dropIndex + 1 === drops.length) ? finalPrizeAmount : Math.floor(finalPrizeAmount / 2);
                     document.getElementById('bonus-current-win').innerText = `${accumulatedWin.toLocaleString()} bits`;
 
                     dropIndex++;
-                    spinCount = 3; // El clásico respin mecánico del Fire
+                    spinCount = 3; // Respin Ilusión
                     document.getElementById('bonus-spins-counter').innerText = spinCount;
                     if (navigator.vibrate) navigator.vibrate([50, 50, 100]);
                 }
@@ -716,47 +591,51 @@
                 if (spinCount <= 0 || dropIndex >= drops.length) {
                     clearInterval(interval);
                     setTimeout(() => {
-                        document.getElementById('bonus-total-win').innerHTML = `${finalPrizeAmount.toLocaleString()} <span class="text-2xl text-green-200">bits</span>`;
+                        document.getElementById('bonus-total-win').innerHTML = `${finalPrizeAmount.toLocaleString()} <span class="text-xl">bits</span>`;
                         document.getElementById('bonus-result-panel').classList.remove('hidden');
                         document.getElementById('bonus-result-panel').classList.add('flex');
                         if (navigator.vibrate) navigator.vibrate([100, 50, 100, 50, 200]);
-                    }, 1500);
+                    }, 1200);
                 }
             }, 1000);
         }
 
-        /* --- 13. CIERRE Y GUARDADO (SUPABASE INTOCABLE) --- */
-        async function finishRound() {
-            // Lógica Matemática
+        /* --- RESET Y GUARDADO FINAL --- */
+        async function resetRound() {
+            // Guardar Lógica
             currentUser.saldo += finalPrizeAmount;
             finalPrizeAmount = 0;
             updateBalanceUI();
 
             await supabaseClient.from('usuarios').update({ 
-                saldo: currentUser.saldo, 
-                tiradas_realizadas: currentUser.tiradas_realizadas 
+                saldo: currentUser.saldo, tiradas_realizadas: currentUser.tiradas_realizadas 
             }).eq('id', currentUser.id);
 
-            // Limpieza Visual
-            document.getElementById('board-container').parentElement.classList.remove('board-dimmed');
-            clearBets(); // Deja el tapete limpio para la nueva ronda
-            
-            document.querySelectorAll('.board-cell').forEach(c => c.classList.remove('cell-fire', 'cell-winner'));
-            document.getElementById('bet-status-banner').innerHTML = `<span class="text-xs font-black uppercase tracking-[0.2em] text-blue-400">Apuestas Abiertas</span>`;
-            
-            gameState = 'BETTING';
-            switchView('view-betting');
-        }
-
-        function returnToBoard() {
+            // Reset UI
+            document.getElementById('bonus-zone').style.display = 'none';
             document.getElementById('bonus-result-panel').classList.add('hidden');
             document.getElementById('bonus-result-panel').classList.remove('flex');
-            finishRound();
-        }
-
-        function switchView(viewId) {
-            document.querySelectorAll('.view-section').forEach(el => el.classList.remove('active'));
-            document.getElementById(viewId).classList.add('active');
+            
+            // Retraer ruleta
+            const rZone = document.getElementById('roulette-zone');
+            rZone.style.height = '80px';
+            document.getElementById('wheel-wrapper').style.width = '120px';
+            document.getElementById('wheel-wrapper').style.height = '120px';
+            document.getElementById('wheel-wrapper').style.opacity = '0.5';
+            
+            // Restaurar Tablero
+            document.getElementById('board-zone').classList.remove('board-dimmed');
+            document.querySelectorAll('.board-cell').forEach(c => c.classList.remove('cell-fire', 'cell-winner'));
+            
+            const phaseText = document.getElementById('phase-text');
+            phaseText.innerText = 'APUESTAS ABIERTAS 00:15';
+            phaseText.className = 'absolute top-2 text-[10px] font-black uppercase tracking-[0.2em] text-blue-400 z-40 bg-zinc-900/80 px-3 py-1 rounded-full';
+            
+            clearBets(); // Deja listo para la próxima ronda
+            
+            // Resetea Rotación para GSAP
+            gsap.set("#wheel-svg-container", { rotation: 0 });
+            gameState = 'BETTING';
         }
     </script>
 </body>
