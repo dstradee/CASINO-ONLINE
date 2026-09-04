@@ -1,0 +1,897 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>Mega Fire Casino</title>
+    
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🔥</text></svg>">
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Supabase e Integraciones (INTOCABLES) -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+
+    <style>
+        :root {
+            --red-num: #dc2626; --black-num: #18181b; --green-num: #16a34a;
+            --fire-glow: #f97316; --fire-core: #fef08a;
+            --safe-bottom: env(safe-area-inset-bottom, 12px);
+        }
+
+        body, html {
+            margin: 0; padding: 0; width: 100vw; height: 100dvh;
+            user-select: none; -webkit-user-select: none; -webkit-touch-callout: none;
+            overflow: hidden; display: flex; flex-direction: column;
+            background-color: #050505; color: white;
+            font-family: ui-sans-serif, system-ui, -apple-system, sans-serif;
+        }
+
+        #toast-msg {
+            position: fixed; top: 15%; left: 50%; transform: translateX(-50%);
+            background: rgba(220, 38, 38, 0.95); color: white; padding: 8px 16px;
+            border-radius: 20px; font-weight: bold; font-size: 0.75rem; text-transform: uppercase;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.5); z-index: 999;
+            opacity: 0; pointer-events: none; transition: opacity 0.3s ease;
+        }
+
+        /* --- VISTAS DINÁMICAS --- */
+        .view-section { display: none; flex-direction: column; height: 100%; width: 100%; animation: fade-in 0.3s ease; }
+        .view-section.active { display: flex; }
+        @keyframes fade-in { 0% { opacity: 0; } 100% { opacity: 1; } }
+
+        /* --- HUB & PROFILE STYLES --- */
+        #view-hub { overflow-y: auto; padding-bottom: var(--safe-bottom); }
+        .hub-card {
+            background: linear-gradient(145deg, #18181b 0%, #09090b 100%);
+            border: 1px solid #27272a;
+            box-shadow: 0 10px 30px -10px rgba(0,0,0,0.8);
+        }
+        .hub-game-card {
+            background: linear-gradient(135deg, #1a0505 0%, #000000 100%);
+            border: 1px solid rgba(220, 38, 38, 0.3);
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        .hub-game-card:active { transform: scale(0.97); }
+
+        /* --- RULETA STYLES (INTOCABLES) --- */
+        .jackpot-row { flex: 0 0 auto; background: linear-gradient(180deg, #18181b 0%, #09090b 100%); border-bottom: 1px solid #27272a; height: 32px; }
+        .j-grand { text-shadow: 0 0 10px #facc15; animation: slow-pulse 2s infinite; }
+        @keyframes slow-pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.7; } }
+        
+        header { flex: 0 0 auto; height: 48px; }
+
+        #roulette-container {
+            flex: 0 0 auto; display: flex; flex-direction: column; align-items: center; justify-content: center;
+            background: radial-gradient(circle at center, #18181b 0%, #000 100%); border-bottom: 1px solid #27272a;
+            transition: height 0.5s cubic-bezier(0.4, 0, 0.2, 1); height: 95px; position: relative; overflow: hidden; z-index: 10;
+        }
+        .wheel-wrapper { position: relative; width: 100px; height: 100px; transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1); margin-top: 5px; }
+        .wheel-svg { width: 100%; height: 100%; border-radius: 50%; border: 4px solid #27272a; box-shadow: 0 0 20px rgba(0,0,0,0.9); will-change: transform; }
+        .wheel-pointer {
+            position: absolute; top: -5px; left: 50%; transform: translateX(-50%); width: 0; height: 0;
+            border-left: 8px solid transparent; border-right: 8px solid transparent; border-top: 20px solid #facc15;
+            z-index: 30; filter: drop-shadow(0 4px 4px rgba(0,0,0,0.8)); transition: all 0.5s ease;
+        }
+        .ball-orbit { position: absolute; top: 0; left: 0; width: 100%; height: 100%; border-radius: 50%; z-index: 20; will-change: transform; pointer-events: none; opacity: 0; transition: opacity 0.3s; }
+        .roulette-ball {
+            position: absolute; top: 12px; left: 50%; transform: translateX(-50%); width: 8px; height: 8px;
+            background: radial-gradient(circle, #fff 0%, #d4d4d8 100%); border-radius: 50%; box-shadow: 0 0 8px rgba(255,255,255,0.8), 0 3px 5px rgba(0,0,0,0.9);
+        }
+        #results-history {
+            position: absolute; bottom: 4px; left: 0; width: 100%; text-align: center;
+            font-size: 0.7rem; font-weight: bold; color: #a1a1aa; letter-spacing: 0.1em; transition: opacity 0.3s ease;
+        }
+
+        #board-zone { 
+            flex: 1 1 0; min-height: 0; display: flex; flex-direction: column; padding: 4px 8px; position: relative; touch-action: none; 
+        }
+        .board-grid { 
+            flex: 1 1 0; min-height: 0; display: grid; 
+            grid-template-columns: repeat(3, 1fr); grid-template-rows: repeat(13, minmax(0, 1fr)); 
+            gap: 2px; width: 100%; max-width: 450px; margin: 0 auto; 
+        }
+        .board-cell {
+            position: relative; display: flex; align-items: center; justify-content: center;
+            font-size: min(1.2rem, 2.5vh); font-weight: 800; border-radius: 4px;
+            border: 1px solid rgba(255,255,255,0.15); cursor: pointer; box-shadow: inset 0 0 5px rgba(0,0,0,0.5);
+        }
+        
+        .cell-red { background: var(--red-num); }
+        .cell-black { background: var(--black-num); }
+        .cell-green { background: var(--green-num); grid-column: 1 / span 3; grid-row: 1; }
+        .color-bets-row { flex: 0 0 auto; display: flex; gap: 4px; width: 100%; max-width: 450px; margin: 4px auto 0 auto; height: 40px; }
+
+        .split-zone { position: absolute; z-index: 15; background: transparent; }
+        .split-h { right: -12px; top: 15%; height: 70%; width: 24px; }
+        .split-v { bottom: -12px; left: 15%; width: 70%; height: 24px; }
+        .split-0-1 { bottom: -12px; left: 16%; width: 22%; height: 24px; }
+        .split-0-2 { bottom: -12px; left: 50%; transform: translateX(-50%); width: 22%; height: 24px; }
+        .split-0-3 { bottom: -12px; right: 16%; width: 22%; height: 24px; }
+
+        .cell-selected { 
+            border-color: #3b82f6 !important; 
+            box-shadow: inset 0 0 0 1px #3b82f6, 0 0 10px rgba(59,130,246,0.8), inset 0 0 5px rgba(0,0,0,0.5) !important; 
+            z-index: 5; 
+        }
+        .chip-visual {
+            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+            width: 22px; height: 22px; background: radial-gradient(circle, #2563eb 0%, #1e3a8a 100%);
+            border: 2px solid #93c5fd; border-radius: 50%; display: flex; align-items: center; justify-content: center;
+            font-size: 0.5rem; font-weight: 900; color: white; box-shadow: 0 3px 5px rgba(0,0,0,0.9);
+            pointer-events: none; z-index: 20; animation: chip-drop 0.1s ease-out;
+        }
+        @keyframes chip-drop { 0% { transform: translate(-50%, -50%) scale(2); opacity: 0; } 100% { transform: translate(-50%, -50%) scale(1); opacity: 1; } }
+
+        .cell-fire { animation: fire-ignite 0.8s alternate infinite; z-index: 6; }
+        .cell-fire::before { content: '🔥'; position: absolute; top: -8px; left: -8px; font-size: clamp(1rem, 2.5vh, 1.4rem); filter: drop-shadow(0 2px 4px rgba(0,0,0,0.9)); z-index: 10; }
+        .cell-winner { border: 3px solid white !important; z-index: 30; box-shadow: 0 0 25px rgba(255,255,255,1) !important; }
+        .board-dimmed .board-cell:not(.cell-winner):not(.cell-fire) { opacity: 0.3; filter: grayscale(70%); }
+        .board-dimmed .split-zone { display: none; }
+
+        @keyframes fire-ignite {
+            0% { box-shadow: 0 0 5px var(--fire-glow); border-color: var(--fire-glow); }
+            100% { box-shadow: 0 0 15px var(--fire-glow), inset 0 0 10px var(--fire-core); border-color: var(--fire-core); }
+        }
+
+        #bonus-zone {
+            position: absolute; inset: 0; background: radial-gradient(circle at center, rgba(69,10,10,0.98) 0%, rgba(0,0,0,0.98) 100%);
+            z-index: 100; display: none; flex-direction: column; justify-content: center; padding: 1rem;
+        }
+        .bonus-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; width: 100%; max-width: 360px; margin: 0 auto; }
+        .bonus-cell {
+            aspect-ratio: 1; background: linear-gradient(135deg, #18181b 0%, #09090b 100%);
+            border: 2px solid #3f3f46; border-radius: 8px; display: flex; align-items: center; justify-content: center;
+            box-shadow: inset 0 0 15px rgba(0,0,0,1); transition: transform 0.3s;
+        }
+        .bonus-cell.revealed {
+            background: linear-gradient(135deg, #ea580c 0%, #9a3412 100%); border-color: #fde047;
+            box-shadow: 0 0 25px rgba(234,88,12,0.5), inset 0 0 10px rgba(253,224,71,0.3);
+            animation: cell-reveal 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+        }
+        @keyframes cell-reveal { 0% { transform: scale(0.5); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
+
+        #controls-zone {
+            flex: 0 0 auto; background: #09090b; border-top: 1px solid #27272a; 
+            padding: 8px 8px max(var(--safe-bottom), 12px) 8px;
+            z-index: 20; box-shadow: 0 -10px 20px rgba(0,0,0,0.8);
+        }
+        .btn-active-chip { border-color: #3b82f6 !important; background-color: #1e3a8a !important; color: white !important; }
+        .btn-active-erase { border-color: #ef4444 !important; background-color: #7f1d1d !important; color: white !important; }
+
+        .spin-btn-style { background: #27272a; border-color: #3f3f46; color: #71717a; transition: all 0.2s; }
+        .spin-btn-active { background: linear-gradient(to bottom, #16a34a, #15803d); border-color: #4ade80; color: white; box-shadow: 0 3px 0 #14532d; }
+        .spin-btn-active:active:not(:disabled) { transform: translateY(3px); box-shadow: 0 0px 0 #14532d; }
+        #btn-spin-mobile, #btn-spin-desktop { touch-action: manipulation; border-width: 1px; border-style: solid; }
+
+        @media (max-height: 750px) {
+            .jackpot-row { height: 26px; }
+            header { height: 44px; }
+            #roulette-container { height: 85px; }
+            .wheel-wrapper { width: 90px; height: 90px; margin-top: 5px; }
+            .color-bets-row { height: 35px; }
+            .board-cell { font-size: 1rem; }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- MENSAJE TOAST -->
+    <div id="toast-msg">Saldo Insuficiente</div>
+
+    <!-- PANTALLAS DE CARGA Y ERROR -->
+    <div id="sys-loading" class="absolute inset-0 z-[200] bg-black flex flex-col items-center justify-center">
+        <div class="text-5xl mb-4">🔥</div>
+        <p class="text-orange-500 font-bold uppercase tracking-widest text-sm animate-pulse">Conectando...</p>
+    </div>
+    <div id="sys-error" class="absolute inset-0 z-[200] bg-black flex flex-col items-center justify-center hidden">
+        <h1 class="text-red-600 text-3xl font-black uppercase">Acceso Denegado</h1>
+    </div>
+
+    <!-- ==========================================
+         VISTA 1: HUB / PERFIL PRINCIPAL
+         ========================================== -->
+    <div id="view-hub" class="view-section active">
+        <div class="flex-1 flex flex-col w-full max-w-md mx-auto p-4 pt-8">
+            
+            <!-- Branding Logo -->
+            <div class="text-center mb-8">
+                <h1 class="text-3xl font-black tracking-widest text-white">
+                    MEGA<span class="text-red-600">FIRE</span>
+                </h1>
+                <p class="text-yellow-500 text-xs font-bold tracking-[0.3em] uppercase mt-1">Casino</p>
+            </div>
+
+            <!-- TARJETA: PERFIL Y SALDO -->
+            <div class="hub-card rounded-2xl p-5 mb-6 relative overflow-hidden">
+                <!-- Glow decorativo -->
+                <div class="absolute -top-10 -right-10 w-32 h-32 bg-red-600/20 blur-3xl rounded-full pointer-events-none"></div>
+                
+                <div class="flex items-center gap-4 relative z-10">
+                    <!-- Avatar UI CSS -->
+                    <div class="w-14 h-14 rounded-full bg-black border border-yellow-500/50 shadow-[0_0_15px_rgba(234,179,8,0.2)] flex items-center justify-center text-2xl flex-shrink-0">
+                        🎰
+                    </div>
+                    <div class="flex flex-col">
+                        <span class="text-[10px] text-zinc-400 uppercase font-bold tracking-wider">Bienvenido,</span>
+                        <span id="hub-player-name" class="text-lg font-black text-white">...</span>
+                    </div>
+                </div>
+                
+                <div class="mt-5 pt-4 border-t border-zinc-800/50 flex flex-col relative z-10">
+                    <span class="text-[10px] text-zinc-400 uppercase font-bold tracking-widest mb-1">Saldo Disponible</span>
+                    <span id="hub-player-balance" class="text-3xl font-black text-white tracking-tight">0 <span class="text-sm text-zinc-500 font-bold">bits</span></span>
+                </div>
+            </div>
+
+            <!-- TARJETA: ROLLOVER PROGRESO -->
+            <div class="hub-card rounded-2xl p-5 mb-8">
+                <div class="flex justify-between items-end mb-3">
+                    <span class="text-[11px] font-black uppercase tracking-widest text-zinc-300">Rollover</span>
+                    <span id="hub-progress-pct" class="text-xl font-black text-yellow-500">0%</span>
+                </div>
+                
+                <!-- Barra visual -->
+                <div class="w-full h-2.5 bg-black rounded-full overflow-hidden border border-zinc-800 mb-3 shadow-inner">
+                    <div id="hub-progress-bar" class="h-full bg-gradient-to-r from-red-600 to-yellow-500 rounded-full transition-all duration-500" style="width: 0%"></div>
+                </div>
+                
+                <div class="flex flex-col gap-0.5">
+                    <span id="hub-progress-text1" class="text-xs text-zinc-300 font-bold">Progreso de juego: 0%</span>
+                    <span id="hub-progress-text2" class="text-[10px] text-zinc-500">Equivalente: 0 tiradas restantes</span>
+                </div>
+            </div>
+
+            <!-- SELECTOR DE JUEGOS -->
+            <div class="mb-4">
+                <h3 class="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-500 mb-3 px-1">Juegos Disponibles</h3>
+                
+                <!-- TARJETA: MEGA FIRE ROULETTE -->
+                <div onclick="goToRoulette()" class="hub-game-card rounded-2xl p-1 relative group cursor-pointer">
+                    <!-- Efecto hover visual -->
+                    <div class="absolute inset-0 bg-red-600/10 opacity-0 group-hover:opacity-100 transition-opacity rounded-2xl"></div>
+                    
+                    <div class="border border-zinc-800/50 bg-black/40 rounded-xl p-6 flex flex-col items-center text-center relative z-10">
+                        <div class="text-5xl mb-3 filter drop-shadow-[0_0_15px_rgba(239,68,68,0.5)]">🎰🔥</div>
+                        <h4 class="text-2xl font-black text-transparent bg-clip-text bg-gradient-to-r from-yellow-400 to-red-500 uppercase tracking-widest mb-1">Mega Fire</h4>
+                        <p class="text-xs text-zinc-400 font-bold uppercase tracking-[0.3em] mb-5">Roulette</p>
+                        
+                        <div class="w-full py-3 bg-gradient-to-b from-red-600 to-red-800 border border-red-500 rounded-lg text-white font-black uppercase tracking-widest text-sm shadow-[0_4px_15px_rgba(220,38,38,0.4)] flex justify-center items-center gap-2">
+                            Jugar Ahora <span class="text-lg leading-none">→</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Preparación Futura (Mantenido visualmente inactivo) -->
+                <!-- <div class="mt-4 hub-card rounded-2xl p-6 text-center opacity-50 cursor-not-allowed border-dashed">
+                    <span class="text-zinc-500 text-sm font-bold uppercase tracking-widest">Próximamente...</span>
+                </div> -->
+            </div>
+        </div>
+    </div>
+
+    <!-- ==========================================
+         VISTA 2: LA RULETA (EXISTENTE Y PROTEGIDA)
+         ========================================== -->
+    <div id="view-betting" class="view-section bg-black">
+        
+        <!-- CABECERA Y JACKPOTS -->
+        <div class="jackpot-row flex justify-between px-2 w-full">
+            <div class="text-center w-1/4 flex flex-col justify-center"><div class="text-[8px] text-green-400 font-bold uppercase leading-none">Mini</div><div class="text-xs font-black leading-none mt-0.5">x2</div></div>
+            <div class="text-center w-1/4 flex flex-col justify-center border-l border-zinc-800"><div class="text-[8px] text-blue-400 font-bold uppercase leading-none">Minor</div><div class="text-xs font-black leading-none mt-0.5">x5</div></div>
+            <div class="text-center w-1/4 flex flex-col justify-center border-l border-zinc-800"><div class="text-[8px] text-purple-400 font-bold uppercase leading-none">Major</div><div class="text-xs font-black leading-none mt-0.5">x20</div></div>
+            <div class="text-center w-1/4 flex flex-col justify-center border-l border-zinc-800"><div class="text-[8px] text-red-500 font-bold uppercase leading-none">Grand</div><div class="text-xs font-black text-yellow-400 j-grand leading-none mt-0.5">x100</div></div>
+        </div>
+        
+        <header class="px-3 bg-zinc-900 flex justify-between items-center border-b border-zinc-800 w-full relative z-50">
+            <!-- Nuevo: Botón "Volver al HUB" integrado en el perfil sin romper layout -->
+            <div class="flex items-center w-1/3 h-full gap-2 overflow-hidden">
+                <button onclick="goToHub()" class="flex-none text-zinc-400 hover:text-white transition-colors px-1" title="Volver al HUB">
+                    <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M15 19l-7-7 7-7"></path></svg>
+                </button>
+                <div class="flex flex-col items-start justify-center h-full w-full overflow-hidden">
+                    <span class="text-[9px] text-zinc-500 uppercase font-bold leading-none mb-1">Jugador</span>
+                    <span id="player-name-roulette" class="text-xs font-bold text-zinc-200 truncate w-full leading-none">...</span>
+                </div>
+            </div>
+            
+            <div class="w-1/3 flex justify-center md:hidden px-1 h-full items-center">
+                <button id="btn-spin-mobile" onclick="executeRound()" class="flex items-center justify-center rounded font-black uppercase tracking-widest w-full h-8 text-[11px] spin-btn-style" disabled>
+                    GIRAR
+                </button>
+            </div>
+
+            <div class="flex flex-col items-end w-1/3 h-full justify-center">
+                <span class="text-[9px] text-zinc-500 uppercase font-bold leading-none mb-1">Saldo Disp.</span>
+                <span id="player-balance" class="text-sm font-black text-white truncate w-full text-right leading-none">0 <span class="text-[9px] text-zinc-400">bits</span></span>
+            </div>
+        </header>
+
+        <!-- ZONA RULETA -->
+        <div id="roulette-container">
+            <div id="phase-text" class="absolute top-1 text-[9px] font-black uppercase tracking-[0.2em] text-blue-400 z-40 bg-black/60 px-2 py-1 rounded-full border border-blue-500/30">
+                APUESTAS ABIERTAS
+            </div>
+            
+            <div id="wheel-wrapper" class="wheel-wrapper">
+                <div class="wheel-pointer" id="wheel-pointer"></div>
+                <div id="wheel-svg" class="wheel-svg"></div>
+                <div id="ball-orbit" class="ball-orbit">
+                    <div class="roulette-ball" id="r-ball"></div>
+                </div>
+                <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[30%] h-[30%] bg-zinc-900 border border-zinc-700 rounded-full z-20 box-shadow-[inset_0_0_10px_black]"></div>
+            </div>
+
+            <div id="results-history"></div>
+        </div>
+
+        <!-- ZONA TABLERO -->
+        <div id="board-zone">
+            <div id="board-container" class="board-grid"></div>
+            <div class="color-bets-row">
+                <div class="board-cell cell-red flex-1" data-num="RED" id="cell-RED">ROJO</div>
+                <div class="board-cell cell-black flex-1" data-num="BLACK" id="cell-BLACK">NEGRO</div>
+            </div>
+        </div>
+
+        <!-- CONTROLES INFERIORES -->
+        <div id="controls-zone">
+            <div class="flex justify-between gap-1 mb-2 h-7">
+                <button onclick="setMode('bet', 100)" class="chip-btn btn-active-chip bg-zinc-800 border border-zinc-600 rounded flex-1 py-1.5 text-zinc-200 font-bold text-xs">100</button>
+                <button onclick="setMode('bet', 250)" class="chip-btn bg-zinc-900 border border-zinc-700 rounded flex-1 py-1.5 text-zinc-400 font-bold text-xs">250</button>
+                <button onclick="setMode('bet', 500)" class="chip-btn bg-zinc-900 border border-zinc-700 rounded flex-1 py-1.5 text-zinc-400 font-bold text-xs">500</button>
+                <button onclick="setMode('bet', 1000)" class="chip-btn bg-zinc-900 border border-zinc-700 rounded flex-1 py-1.5 text-zinc-400 font-bold text-xs">1K</button>
+                <button onclick="setMode('erase')" class="chip-btn bg-zinc-900 border border-zinc-700 rounded flex-none w-10 py-1.5 text-zinc-400 font-bold text-xs">🗑️</button>
+            </div>
+
+            <div class="flex justify-between items-center px-1 h-8">
+                <div class="flex gap-2 h-full py-0.5">
+                    <button onclick="undoBet()" class="bg-zinc-800 text-zinc-300 px-3 rounded text-[10px] font-bold uppercase border border-zinc-700 active:bg-zinc-700 flex items-center">Deshacer</button>
+                    <button onclick="clearBets()" class="bg-zinc-800 text-zinc-300 px-3 rounded text-[10px] font-bold uppercase border border-zinc-700 active:bg-zinc-700 flex items-center">Limpiar</button>
+                </div>
+                <div class="flex flex-col justify-center items-end h-full">
+                    <span id="prev-bet-label" class="text-[9px] text-zinc-500 uppercase font-bold leading-none mb-0.5">Apuesta Total</span>
+                    <span id="total-bet-display" class="text-lg font-black text-white leading-none">0 <span class="text-[9px] text-zinc-400">bits</span></span>
+                </div>
+            </div>
+            
+            <button id="btn-spin-desktop" onclick="executeRound()" class="hidden md:flex w-full h-10 rounded font-black uppercase tracking-widest spin-btn-style items-center justify-center relative z-50 mt-1" disabled>
+                GIRAR
+            </button>
+        </div>
+
+        <!-- MEGA FIRE BONUS -->
+        <div id="bonus-zone">
+            <div class="text-center mb-4">
+                <h2 class="text-4xl font-black text-transparent bg-clip-text bg-gradient-to-r from-yellow-400 to-red-500 uppercase drop-shadow-[0_0_10px_rgba(239,68,68,0.8)] leading-none">MEGA FIRE</h2>
+                <p class="text-orange-300 font-bold tracking-[0.3em] uppercase text-xs mt-1">Bonus Game</p>
+            </div>
+            
+            <div class="flex justify-between w-full max-w-[360px] mb-4 mx-auto bg-black/60 p-2 rounded border border-red-900/50">
+                <div class="flex flex-col items-start">
+                    <span class="text-[10px] text-zinc-400 uppercase font-bold">Apuesta Base</span>
+                    <span id="bonus-base-bet" class="text-base font-black text-white">0 bits</span>
+                </div>
+                <div class="flex flex-col items-end">
+                    <span class="text-[10px] text-red-400 uppercase font-bold">Bonus Spins</span>
+                    <span id="bonus-spins-counter" class="text-2xl font-black text-white leading-none">3</span>
+                </div>
+            </div>
+
+            <div class="bonus-grid" id="bonus-grid"></div>
+
+            <div class="text-center mt-6">
+                <span class="text-[10px] text-yellow-500 uppercase font-bold tracking-widest block mb-1">Premio Acumulado</span>
+                <span id="bonus-current-win" class="text-2xl font-black text-green-400">0 bits</span>
+            </div>
+
+            <div id="bonus-result-panel" class="absolute inset-0 bg-black/95 z-50 hidden flex-col items-center justify-center p-6">
+                <span class="text-sm text-yellow-500 font-bold uppercase tracking-[0.2em] mb-4">Bonus Completado</span>
+                <span class="text-xs text-zinc-400 font-bold uppercase mb-1">Premio Total</span>
+                <span id="bonus-total-win" class="text-5xl font-black text-green-400 drop-shadow-[0_0_20px_#4ade80] mb-8">0 <span class="text-lg">bits</span></span>
+                <button onclick="resetRound()" class="w-full max-w-[250px] h-12 bg-green-700 text-white font-black rounded uppercase tracking-widest active:scale-95 border border-green-500 shadow-[0_4px_0_#14532d] relative z-50">
+                    Siguiente Ronda
+                </button>
+            </div>
+        </div>
+    </div> <!-- FIN VIEW BETTING -->
+
+    <!-- ==========================================
+         LÓGICA JAVASCRIPT
+         ========================================== -->
+    <script>
+        const { createClient } = supabase;
+        const supabaseUrl = 'https://qutkwzjchchhbqfhtaxi.supabase.co';
+        const supabaseKey = 'sb_publishable_fv4VSDx-LJrkorzY0bOKaA_0poFJcU1';
+        const supabaseClient = createClient(supabaseUrl, supabaseKey);
+
+        let currentUser = null;
+        let gameState = 'BETTING'; 
+        let inputMode = 'bet'; 
+        let currentChip = 100;
+        let activeBets = {}; 
+        let betHistory = []; 
+        let finalPrizeAmount = 0;
+        let resultsHistory = []; 
+
+        const ROULETTE_NUMS = [0,32,15,19,4,21,2,25,17,34,6,27,13,36,11,30,8,23,10,5,24,16,33,1,20,14,31,9,22,18,29,7,28,12,35,3,26];
+        const RED_NUMS = [1,3,5,7,9,12,14,16,18,19,21,23,25,27,30,32,34,36];
+        const SEGMENT_DEG = 360 / 37;
+
+        function showToast(msg) {
+            const toast = document.getElementById('toast-msg');
+            toast.innerText = msg;
+            toast.style.opacity = '1';
+            setTimeout(() => toast.style.opacity = '0', 2000);
+        }
+
+        // --- SISTEMA DE VISTAS (NUEVO FLUJO) ---
+        function switchView(viewId) {
+            document.querySelectorAll('.view-section').forEach(el => el.classList.remove('active'));
+            document.getElementById(viewId).classList.add('active');
+        }
+
+        function goToRoulette() {
+            switchView('view-betting');
+        }
+
+        function goToHub() {
+            if (gameState === 'BETTING') {
+                switchView('view-hub');
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', async () => {
+            buildBoard();
+            buildSvgWheel();
+            setupPointerEvents();
+            
+            const urlParams = new URLSearchParams(window.location.search);
+            const codigo = urlParams.get('codigo');
+            if (!codigo) return document.getElementById('sys-error').classList.remove('hidden');
+
+            const { data, error } = await supabaseClient.from('usuarios').select('*').eq('codigo', codigo).single();
+            if (error || !data) {
+                document.getElementById('sys-loading').classList.add('hidden');
+                document.getElementById('sys-error').classList.remove('hidden');
+            } else {
+                currentUser = data;
+                document.getElementById('sys-loading').classList.add('hidden');
+                
+                // INICIAMOS EN EL HUB
+                switchView('view-hub');
+                updateBalanceUI();
+            }
+        });
+
+        function updateBalanceUI() {
+            // Actualizar datos en Ruleta
+            document.getElementById('player-name-roulette').innerText = currentUser.nombre;
+            const totalBet = Object.values(activeBets).reduce((a, b) => a + b, 0);
+            const visualBalance = parseFloat(currentUser.saldo) - totalBet;
+            document.getElementById('player-balance').innerHTML = `${visualBalance.toLocaleString('es-ES')} <span class="text-[10px] text-zinc-400">bits</span>`;
+            
+            // Actualizar datos en HUB
+            document.getElementById('hub-player-name').innerText = currentUser.nombre;
+            document.getElementById('hub-player-balance').innerHTML = `${visualBalance.toLocaleString('es-ES')} <span class="text-sm text-zinc-500 font-bold">bits</span>`;
+            
+            // Lógica de Progreso del HUB
+            let tRealizadas = parseFloat(currentUser.tiradas_realizadas) || 0;
+            let tObjetivo = parseFloat(currentUser.tiradas_objetivo) || 1; // Prevenir div by 0
+            
+            let pct = Math.min(100, (tRealizadas / tObjetivo) * 100);
+            let restantes = Math.max(0, tObjetivo - tRealizadas);
+
+            document.getElementById('hub-progress-pct').innerText = `${pct.toFixed(1)}%`;
+            document.getElementById('hub-progress-bar').style.width = `${pct}%`;
+            document.getElementById('hub-progress-text1').innerText = `Progreso de juego: ${pct.toFixed(1)}%`;
+            document.getElementById('hub-progress-text2').innerText = `Equivalente: ${restantes} tiradas restantes`;
+        }
+
+        /* --- RESTO DEL CÓDIGO DE RULETA INTACTO --- */
+        function buildBoard() {
+            const container = document.getElementById('board-container');
+            container.innerHTML = '';
+            
+            let cell0 = `<div class="board-cell cell-green" data-num="0" id="cell-0">
+                <span>0</span>
+                <div class="split-zone split-0-1" data-num="0|1"></div>
+                <div class="split-zone split-0-2" data-num="0|2"></div>
+                <div class="split-zone split-0-3" data-num="0|3"></div>
+            </div>`;
+            container.innerHTML += cell0;
+            
+            for(let row=0; row<12; row++) {
+                for(let col=1; col<=3; col++) {
+                    const num = (row * 3) + col;
+                    const isRed = RED_NUMS.includes(num);
+                    
+                    let splitsHtml = '';
+                    if (col < 3) splitsHtml += `<div class="split-zone split-h" data-num="${num}|${num+1}"></div>`;
+                    if (row < 11) splitsHtml += `<div class="split-zone split-v" data-num="${num}|${num+3}"></div>`;
+
+                    container.innerHTML += `
+                        <div class="board-cell cell-num ${isRed ? 'cell-red' : 'cell-black'}" data-num="${num}" id="cell-${num}">
+                            <span>${num}</span>
+                            ${splitsHtml}
+                        </div>
+                    `;
+                }
+            }
+        }
+
+        let isPainting = false;
+        let paintedInStroke = new Set();
+
+        function setupPointerEvents() {
+            const board = document.getElementById('board-zone');
+            board.addEventListener('pointerdown', (e) => {
+                if (gameState !== 'BETTING') return;
+                isPainting = true; paintedInStroke.clear(); processPointer(e);
+            });
+            board.addEventListener('pointermove', (e) => {
+                if (!isPainting || gameState !== 'BETTING') return; processPointer(e);
+            });
+            window.addEventListener('pointerup', () => { isPainting = false; });
+            window.addEventListener('pointercancel', () => { isPainting = false; });
+        }
+
+        function processPointer(e) {
+            const el = document.elementFromPoint(e.clientX, e.clientY);
+            if (!el) return;
+
+            const split = el.closest('.split-zone');
+            const cell = el.closest('.board-cell');
+            
+            let targetKey = null;
+            if (split) targetKey = split.getAttribute('data-num');
+            else if (cell) targetKey = cell.getAttribute('data-num');
+            
+            if (targetKey && !paintedInStroke.has(targetKey)) {
+                paintedInStroke.add(targetKey);
+                if (inputMode === 'bet') placeBet(targetKey);
+                else if (inputMode === 'erase') eraseBet(targetKey);
+            }
+        }
+
+        function setMode(mode, val = null) {
+            if(gameState !== 'BETTING') return;
+            inputMode = mode;
+            if (val) currentChip = val;
+            
+            document.querySelectorAll('.chip-btn').forEach(btn => {
+                btn.classList.remove('btn-active-chip', 'btn-active-erase');
+                if (mode === 'bet' && parseInt(btn.innerText.replace('1K','1000')) === val) btn.classList.add('btn-active-chip');
+                if (mode === 'erase' && btn.innerText === '🗑️') btn.classList.add('btn-active-erase');
+            });
+        }
+
+        function placeBet(key) {
+            if(gameState !== 'BETTING') return;
+            
+            const currentTotal = Object.values(activeBets).reduce((a, b) => a + b, 0);
+            if (currentTotal + currentChip > currentUser.saldo) {
+                showToast("Saldo insuficiente");
+                return;
+            }
+
+            activeBets[key] = (activeBets[key] || 0) + currentChip;
+            betHistory.push({ type: 'add', key: key, amount: currentChip });
+            if(navigator.vibrate) navigator.vibrate(10);
+            updateBoardUI();
+        }
+
+        function eraseBet(key) {
+            if (activeBets[key]) {
+                betHistory.push({ type: 'erase', key: key, amount: activeBets[key] });
+                delete activeBets[key];
+                if(navigator.vibrate) navigator.vibrate(15);
+                updateBoardUI();
+            }
+        }
+
+        function undoBet() {
+            if(gameState !== 'BETTING' || betHistory.length === 0) return;
+            const action = betHistory.pop();
+            if (action.type === 'add') {
+                activeBets[action.key] -= action.amount;
+                if (activeBets[action.key] <= 0) delete activeBets[action.key];
+            } else if (action.type === 'erase') {
+                activeBets[action.key] = action.amount;
+            }
+            updateBoardUI();
+        }
+
+        function clearBets() {
+            if(gameState !== 'BETTING') return;
+            activeBets = {}; betHistory = [];
+            updateBoardUI();
+        }
+
+        function syncSpinButtons(enabled, isProcessing = false) {
+            ['btn-spin-mobile', 'btn-spin-desktop'].forEach(id => {
+                const btn = document.getElementById(id);
+                if(!btn) return;
+                btn.disabled = !enabled;
+                btn.innerText = isProcessing ? 'PROCESANDO' : 'GIRAR';
+                btn.classList.remove('spin-btn-active', 'spin-btn-style');
+                if (enabled) btn.classList.add('spin-btn-active');
+                else btn.classList.add('spin-btn-style');
+            });
+        }
+
+        function updateBoardUI() {
+            document.querySelectorAll('.cell-selected').forEach(c => c.classList.remove('cell-selected'));
+            document.querySelectorAll('.chip-visual').forEach(c => c.remove());
+            
+            let total = 0;
+            for (const [key, amount] of Object.entries(activeBets)) {
+                total += amount;
+                let txt = amount >= 1000 ? (amount/1000)+'K' : amount;
+                
+                if (key === 'RED' || key === 'BLACK') {
+                    const cell = document.getElementById(`cell-${key}`);
+                    if(cell) { cell.classList.add('cell-selected'); cell.innerHTML += `<div class="chip-visual">${txt}</div>`; }
+                } else if (key.includes('|')) {
+                    const splitEl = document.querySelector(`.split-zone[data-num="${key}"]`);
+                    if(splitEl) splitEl.innerHTML = `<div class="chip-visual">${txt}</div>`;
+                } else {
+                    const cell = document.getElementById(`cell-${key}`);
+                    if (cell) { cell.classList.add('cell-selected'); cell.innerHTML += `<div class="chip-visual">${txt}</div>`; }
+                }
+            }
+
+            document.getElementById('prev-bet-label').innerText = 'Apuesta Total';
+            document.getElementById('total-bet-display').innerHTML = `${total.toLocaleString()} <span class="text-[9px] text-zinc-400">bits</span>`;
+            updateBalanceUI();
+            
+            if (total > 0) syncSpinButtons(true, false);
+            else syncSpinButtons(false, false);
+        }
+
+        function getCoveredNumbers() {
+            let covered = new Set();
+            for (let key of Object.keys(activeBets)) {
+                if (key === 'RED') { RED_NUMS.forEach(n => covered.add(n)); }
+                else if (key === 'BLACK') { for(let i=1; i<=36; i++) { if(!RED_NUMS.includes(i)) covered.add(i); } } 
+                else { key.toString().split('|').forEach(n => covered.add(parseInt(n))); }
+            }
+            return Array.from(covered);
+        }
+
+        function getResultadoTirada(usuario) {
+            const rand = Math.random();
+            const isBono = usuario.tiene_bono; 
+            let mult = 0; let tipo = '';
+
+            if (!isBono) { 
+                if (rand < 0.55) { mult = 0; tipo = 'loss'; }
+                else if (rand < 0.80) { mult = 0.3; tipo = 'false-win'; }
+                else if (rand < 0.95) { mult = 1.2; tipo = 'win-normal'; }
+                else { mult = 5; tipo = 'win-mega'; }
+            } else { 
+                if (rand < 0.42) { mult = 0; tipo = 'loss'; }
+                else if (rand < 0.74) { mult = 0.3; tipo = 'false-win'; }
+                else if (rand < 0.94) { mult = 1.2; tipo = 'win-normal'; }
+                else { mult = 5; tipo = 'win-mega'; }
+            }
+            return { mult, tipo };
+        }
+
+        function buildSvgWheel() {
+            const container = document.getElementById('wheel-svg');
+            let svg = `<svg viewBox="0 0 100 100" width="100%" height="100%">`;
+            svg += `<circle cx="50" cy="50" r="48" fill="#18181b" />`; 
+            const angle = 360 / 37; const rad = Math.PI / 180;
+            
+            ROULETTE_NUMS.forEach((num, i) => {
+                let startAngle = (i * angle) - (angle/2); let endAngle = ((i + 1) * angle) - (angle/2);
+                let x1 = 50 + 40 * Math.sin(startAngle * rad); let y1 = 50 - 40 * Math.cos(startAngle * rad);
+                let x2 = 50 + 40 * Math.sin(endAngle * rad); let y2 = 50 - 40 * Math.cos(endAngle * rad);
+                let color = (num === 0) ? '#16a34a' : (i % 2 === 0 ? '#171717' : '#dc2626');
+                svg += `<path d="M50,50 L${x1},${y1} A40,40 0 0,1 ${x2},${y2} Z" fill="${color}" stroke="#000" stroke-width="0.3"/>`;
+                let textAngle = i * angle; let tx = 50 + 33 * Math.sin(textAngle * rad); let ty = 50 - 33 * Math.cos(textAngle * rad);
+                svg += `<text x="${tx}" y="${ty}" fill="#fff" font-size="4" font-weight="bold" text-anchor="middle" dominant-baseline="middle" transform="rotate(${textAngle}, ${tx}, ${ty})">${num}</text>`;
+            });
+            svg += `</svg>`;
+            container.innerHTML = svg;
+        }
+
+        let currentWheelRot = 0; let currentBallRot = 0; let lastTotalBet = 0;
+
+        async function executeRound() {
+            const totalBet = Object.values(activeBets).reduce((a, b) => a + b, 0);
+            if (totalBet <= 0 || gameState !== 'BETTING') return;
+            
+            lastTotalBet = totalBet;
+            gameState = 'CLOSED';
+            const phaseText = document.getElementById('phase-text');
+            phaseText.innerText = 'APUESTAS CERRADAS';
+            phaseText.className = 'absolute top-1 text-[9px] font-black uppercase tracking-[0.2em] text-red-500 z-40 bg-zinc-900/90 px-3 py-1 rounded-full border border-red-500/50';
+            
+            syncSpinButtons(false, true);
+            document.getElementById('board-zone').classList.add('board-dimmed');
+            document.getElementById('results-history').style.opacity = '0';
+
+            currentUser.saldo -= totalBet;
+            currentUser.tiradas_realizadas += 1;
+            
+            // Actualiza visualmente el saldo general para que el HUB también esté al día
+            updateBalanceUI();
+
+            const { mult, tipo } = getResultadoTirada(currentUser);
+            
+            let resultNumber = null;
+            const userNumbers = getCoveredNumbers();
+            
+            if (mult > 0) {
+                resultNumber = userNumbers[Math.floor(Math.random() * userNumbers.length)];
+            } else {
+                const availableLosses = ROULETTE_NUMS.filter(n => !userNumbers.includes(n));
+                resultNumber = availableLosses.length > 0 ? availableLosses[Math.floor(Math.random() * availableLosses.length)] : 0;
+            }
+
+            let isMegaFire = (tipo === 'win-mega');
+            let fireNumbers = [];
+            if (isMegaFire) fireNumbers.push(resultNumber);
+            
+            while(fireNumbers.length < 5) {
+                let r = Math.floor(Math.random() * 37);
+                if(!fireNumbers.includes(r) && r !== resultNumber) fireNumbers.push(r);
+            }
+
+            phaseText.innerText = '🔥 FIRE NUMBERS 🔥';
+            phaseText.classList.replace('text-red-500', 'text-orange-500');
+            phaseText.classList.replace('border-red-500/50', 'border-orange-500/50');
+            await new Promise(r => setTimeout(r, 300));
+            
+            for (let num of fireNumbers) {
+                document.getElementById(`cell-${num}`).classList.add('cell-fire');
+                if (navigator.vibrate) navigator.vibrate(20);
+                await new Promise(r => setTimeout(r, 100));
+            }
+            await new Promise(r => setTimeout(r, 400));
+
+            phaseText.innerText = 'GIRANDO...';
+            phaseText.classList.add('animate-pulse');
+            
+            const rContainer = document.getElementById('roulette-container');
+            const rWrapper = document.getElementById('wheel-wrapper');
+            rContainer.style.height = '40vh'; 
+            rWrapper.style.width = '240px';
+            rWrapper.style.height = '240px';
+            
+            document.getElementById('ball-orbit').style.opacity = '1';
+
+            const targetIndex = ROULETTE_NUMS.indexOf(resultNumber);
+            const targetAngleWheel = 360 - (targetIndex * SEGMENT_DEG); 
+            const wheelSpinAmount = (360 * 6) + targetAngleWheel - (currentWheelRot % 360);
+            currentWheelRot += wheelSpinAmount;
+
+            const ballSpinAmount = (-360 * 10) - (currentBallRot % 360);
+            currentBallRot += ballSpinAmount;
+
+            gsap.to("#wheel-svg", { rotation: currentWheelRot, duration: 6, ease: "power2.inOut", transformOrigin: "50% 50%" });
+            gsap.to("#ball-orbit", { rotation: currentBallRot, duration: 6, ease: "power2.inOut", transformOrigin: "50% 50%" });
+
+            await new Promise(r => setTimeout(r, 6200));
+
+            document.getElementById('ball-orbit').style.opacity = '0';
+            document.getElementById(`cell-${resultNumber}`).classList.add('cell-winner');
+            if (navigator.vibrate) navigator.vibrate([100, 50, 100]);
+
+            resultsHistory.unshift(resultNumber);
+            if(resultsHistory.length > 8) resultsHistory.pop();
+            document.getElementById('results-history').innerText = resultsHistory.join(' · ');
+
+            if (isMegaFire) {
+                phaseText.innerText = `🔥 RESULTADO: ${resultNumber} 🔥`;
+                phaseText.className = 'absolute top-1 text-[14px] font-black uppercase tracking-[0.2em] text-red-500 z-40 bg-zinc-900/90 px-4 py-2 rounded-full border border-red-500 shadow-[0_0_15px_rgba(239,68,68,0.8)]';
+                await new Promise(r => setTimeout(r, 2000));
+                startBonusGame(totalBet, mult, tipo);
+            } else if (mult > 0) {
+                finalPrizeAmount = totalBet * mult;
+                phaseText.innerText = `RESULTADO: ${resultNumber} | PREMIO: ${finalPrizeAmount} bits`;
+                phaseText.className = 'absolute top-1 text-[11px] font-black uppercase tracking-[0.1em] text-green-400 z-40 bg-zinc-900/90 px-4 py-2 rounded-full border border-green-500 shadow-[0_0_15px_rgba(34,197,94,0.8)]';
+                await new Promise(r => setTimeout(r, 3000));
+                resetRound();
+            } else {
+                phaseText.innerText = `RESULTADO: ${resultNumber}`;
+                phaseText.className = 'absolute top-1 text-[11px] font-black uppercase tracking-[0.2em] text-white z-40 bg-zinc-900/90 px-4 py-2 rounded-full border border-white/50';
+                await new Promise(r => setTimeout(r, 2500));
+                finalPrizeAmount = 0;
+                resetRound();
+            }
+        }
+
+        function startBonusGame(totalBet, mult, tipo) {
+            gameState = 'BONUS';
+            finalPrizeAmount = totalBet * mult; 
+            
+            document.getElementById('bonus-zone').style.display = 'flex';
+            document.getElementById('bonus-base-bet').innerText = `${totalBet.toLocaleString()} bits`;
+            document.getElementById('bonus-current-win').innerText = `0 bits`;
+            
+            const grid = document.getElementById('bonus-grid');
+            grid.innerHTML = '';
+            for(let i=0; i<9; i++) grid.innerHTML += `<div class="bonus-cell" id="bcell-${i}"></div>`;
+
+            let drops = [ {val: 'x1', style: 'text-white text-xl'}, {val: 'x2', style: 'text-white text-3xl'}, {val: 'MINI', style: 'text-green-400 text-3xl drop-shadow-[0_0_10px_#4ade80]'} ];
+
+            let spinCount = 3; let dropIndex = 0;
+            const availableCells = [0,1,2,3,4,5,6,7,8].sort(() => 0.5 - Math.random());
+            let accumulatedWin = 0;
+
+            const interval = setInterval(() => {
+                spinCount--;
+                document.getElementById('bonus-spins-counter').innerText = spinCount;
+                if (navigator.vibrate) navigator.vibrate(30);
+
+                if (dropIndex < drops.length && spinCount > 0) {
+                    const cell = document.getElementById(`bcell-${availableCells[dropIndex]}`);
+                    cell.classList.add('revealed');
+                    cell.innerHTML = `<span class="font-black ${drops[dropIndex].style}">${drops[dropIndex].val}</span>`;
+                    
+                    accumulatedWin = (dropIndex + 1 === drops.length) ? finalPrizeAmount : Math.floor(finalPrizeAmount / 2);
+                    document.getElementById('bonus-current-win').innerText = `${accumulatedWin.toLocaleString()} bits`;
+
+                    dropIndex++; spinCount = 3; 
+                    document.getElementById('bonus-spins-counter').innerText = spinCount;
+                    if (navigator.vibrate) navigator.vibrate([50, 50, 100]);
+                }
+
+                if (spinCount <= 0 || dropIndex >= drops.length) {
+                    clearInterval(interval);
+                    setTimeout(() => {
+                        document.getElementById('bonus-total-win').innerHTML = `${finalPrizeAmount.toLocaleString()} <span class="text-xl">bits</span>`;
+                        document.getElementById('bonus-result-panel').classList.remove('hidden');
+                        document.getElementById('bonus-result-panel').classList.add('flex');
+                        if (navigator.vibrate) navigator.vibrate([100, 50, 100, 50, 200]);
+                    }, 1200);
+                }
+            }, 1000);
+        }
+
+        async function resetRound() {
+            currentUser.saldo += finalPrizeAmount;
+            finalPrizeAmount = 0;
+            updateBalanceUI();
+
+            await supabaseClient.from('usuarios').update({ 
+                saldo: currentUser.saldo, 
+                tiradas_realizadas: currentUser.tiradas_realizadas 
+            }).eq('id', currentUser.id);
+
+            document.getElementById('bonus-zone').style.display = 'none';
+            document.getElementById('bonus-result-panel').classList.add('hidden');
+            document.getElementById('bonus-result-panel').classList.remove('flex');
+            
+            const rContainer = document.getElementById('roulette-container');
+            const rWrapper = document.getElementById('wheel-wrapper');
+            rContainer.style.height = '95px';
+            rWrapper.style.width = '100px';
+            rWrapper.style.height = '100px';
+            
+            document.getElementById('board-zone').classList.remove('board-dimmed');
+            document.querySelectorAll('.board-cell').forEach(c => c.classList.remove('cell-fire', 'cell-winner'));
+            document.getElementById('results-history').style.opacity = '1';
+            
+            clearBets(); 
+            document.getElementById('prev-bet-label').innerText = 'Tirada Anterior';
+            document.getElementById('total-bet-display').innerHTML = `${lastTotalBet.toLocaleString()} <span class="text-[9px] text-zinc-400">bits</span>`;
+            
+            const phaseText = document.getElementById('phase-text');
+            phaseText.innerText = 'APUESTAS ABIERTAS';
+            phaseText.className = 'absolute top-1 text-[9px] font-black uppercase tracking-[0.2em] text-blue-400 z-40 bg-black/60 px-2 py-1 rounded-full border border-blue-500/30';
+            
+            gsap.set("#wheel-svg", { rotation: 0 });
+            gsap.set("#ball-orbit", { rotation: 0 });
+            currentWheelRot = 0; currentBallRot = 0;
+
+            gameState = 'BETTING';
+        }
+    </script>
+</body>
+</html>
