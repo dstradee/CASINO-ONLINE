@@ -2,7 +2,6 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <!-- Meta tag clave para que en móvil se vea perfecto y como una app nativa -->
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Admin - Megafire Casino</title>
     
@@ -12,7 +11,7 @@
 </head>
 <body class="bg-slate-100 text-slate-800 font-sans min-h-screen">
 
-    <!-- 1. PANTALLA PRINCIPAL DE LOGIN (Se muestra por defecto) -->
+    <!-- PANTALLA PRINCIPAL DE LOGIN -->
     <div id="login-view" class="min-h-screen bg-slate-900 flex flex-col justify-center items-center p-4">
         <div class="bg-slate-800 p-6 sm:p-8 rounded-2xl border border-slate-700 shadow-2xl w-full max-w-md">
             <div class="text-center mb-8">
@@ -24,7 +23,6 @@
             <form id="login-form" class="space-y-5">
                 <div>
                     <label class="block text-sm font-bold text-slate-300 mb-2">Correo Electrónico</label>
-                    <!-- Inputs más grandes para móvil (p-4) -->
                     <input type="email" id="login-email" required placeholder="admin@casino.com" class="w-full bg-slate-900 border border-slate-600 text-white rounded-xl focus:ring-2 focus:ring-blue-500 focus:outline-none block p-4 text-lg">
                 </div>
                 <div>
@@ -32,11 +30,11 @@
                     <input type="password" id="login-password" required placeholder="••••••••" class="w-full bg-slate-900 border border-slate-600 text-white rounded-xl focus:ring-2 focus:ring-blue-500 focus:outline-none block p-4 text-lg">
                 </div>
                 
+                <!-- ESTE ES EL CHIVATO: Te dirá el error exacto de Supabase -->
                 <div id="login-error" class="hidden text-red-400 text-sm font-bold text-center bg-red-900/20 p-3 rounded-lg border border-red-900/50">
-                    ⚠️ Correo o contraseña incorrectos.
+                    ⚠️ Error aquí
                 </div>
                 
-                <!-- Botón gigante para móvil -->
                 <button type="submit" id="btn-login" class="w-full text-white bg-blue-600 hover:bg-blue-500 active:bg-blue-700 font-black rounded-xl text-lg px-5 py-4 text-center transition-all shadow-[0_4px_15px_rgba(37,99,235,0.4)] mt-4">
                     INICIAR SESIÓN
                 </button>
@@ -44,9 +42,8 @@
         </div>
     </div>
 
-    <!-- 2. PANTALLA DEL DASHBOARD (Oculta hasta loguearse) -->
+    <!-- PANTALLA DEL DASHBOARD -->
     <div id="dashboard-view" class="hidden pb-20">
-        <!-- Header Fijo Superior -->
         <header class="bg-slate-900 text-white p-4 shadow-lg sticky top-0 z-50 flex justify-between items-center">
             <h1 class="text-lg font-black tracking-wider flex items-center gap-2">
                 <span>⚙️</span> PANEL ADMIN
@@ -62,11 +59,9 @@
         </header>
 
         <main class="max-w-4xl mx-auto p-4 mt-2 grid gap-6">
-            
-            <!-- PANEL DE CREACIÓN DE USUARIOS -->
+            <!-- PANEL CREAR -->
             <section class="bg-white rounded-2xl shadow-sm border border-slate-200 p-5">
                 <h2 class="text-xl font-black text-slate-900 mb-4 border-b pb-3">➕ Nuevo Jugador</h2>
-                
                 <form id="create-user-form" class="space-y-4">
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
@@ -92,18 +87,16 @@
                     </button>
                 </form>
 
-                <!-- Caja del Enlace (Oculta por defecto) -->
                 <div id="magic-link-container" class="hidden mt-5 p-4 bg-green-100 border-2 border-green-400 rounded-xl">
                     <p class="text-sm text-green-900 font-black mb-2 uppercase">✅ Enlace Listo. Cópialo:</p>
                     <input type="text" id="magic-link-url" readonly class="w-full bg-white border border-green-300 text-green-900 text-sm font-mono rounded-lg p-3 focus:outline-none select-all">
                 </div>
             </section>
 
-            <!-- LISTA DE JUGADORES -->
+            <!-- LISTA JUGADORES -->
             <section class="bg-white rounded-2xl shadow-sm border border-slate-200 p-5">
                 <h2 class="text-xl font-black text-slate-900 mb-4 border-b pb-3">👥 Jugadores Activos</h2>
                 <div id="users-grid" class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <!-- Cards de usuarios inyectadas por JS -->
                     <div class="text-slate-400 text-center py-6 font-bold w-full">Cargando datos...</div>
                 </div>
             </section>
@@ -111,21 +104,18 @@
     </div>
 
     <script>
-        // --- 1. CONFIGURACIÓN SUPABASE ---
+        // CONFIGURACIÓN SUPABASE
         const SUPABASE_URL = 'https://qutkwzjchchhbqfhtaxi.supabase.co';
         const SUPABASE_KEY = 'sb_publishable_fv4VSDx-LJrkorzY0bOKaA_0poFJcU1';
         const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-        // Referencias a las vistas
         const loginView = document.getElementById('login-view');
         const dashboardView = document.getElementById('dashboard-view');
 
-        // --- 2. GESTIÓN DE SESIÓN Y VISTAS ---
-        
         function mostrarDashboard() {
             loginView.classList.add('hidden');
             dashboardView.classList.remove('hidden');
-            fetchUsers(); // Cargar la tabla al entrar
+            fetchUsers();
         }
 
         function mostrarLogin() {
@@ -135,17 +125,14 @@
             document.getElementById('login-error').classList.add('hidden');
         }
 
-        // Comprobación silenciosa al abrir la página
         async function comprobarSesionSilenciosa() {
-            const { data: { session }, error } = await supabase.auth.getSession();
-            // Si hay sesión guardada en la caché del móvil, saltamos directo al panel
+            const { data: { session } } = await supabase.auth.getSession();
             if (session) {
                 mostrarDashboard();
             }
-            // Si no hay sesión, se queda en la pantalla de login (que ya está visible por defecto)
         }
 
-        // Evento: Botón de Iniciar Sesión
+        // LÓGICA DE LOGIN CON MANEJO DE ERRORES MEJORADO
         document.getElementById('login-form').addEventListener('submit', async (e) => {
             e.preventDefault();
             
@@ -155,7 +142,7 @@
             const password = document.getElementById('login-password').value;
 
             btn.disabled = true;
-            btn.innerHTML = "ENTRANDO...";
+            btn.innerHTML = "⏳ ENTRANDO...";
             errorMsg.classList.add('hidden');
 
             const { data, error } = await supabase.auth.signInWithPassword({
@@ -164,6 +151,8 @@
             });
 
             if (error) {
+                // AHORA SÍ: Te mostrará el error exacto para saber por qué falla
+                errorMsg.innerText = "⚠️ Error: " + error.message;
                 errorMsg.classList.remove('hidden');
                 btn.disabled = false;
                 btn.innerHTML = "INICIAR SESIÓN";
@@ -174,16 +163,14 @@
             }
         });
 
-        // Evento: Botón Salir (Cerrar Sesión)
         document.getElementById('btn-logout').addEventListener('click', async () => {
             await supabase.auth.signOut();
             mostrarLogin();
         });
 
-
-        // --- 3. LÓGICA DE CREACIÓN DE USUARIOS ---
+        // LÓGICA CREAR USUARIO
         document.getElementById('create-user-form').addEventListener('submit', async (e) => {
-            e.preventDefault(); // Evita que la web recargue
+            e.preventDefault();
             
             const btn = document.getElementById('btn-crear');
             btn.disabled = true;
@@ -220,7 +207,6 @@
                 return;
             }
 
-            // Crear el enlace para pasarlo por WhatsApp
             let currentPath = window.location.href;
             let basePath = currentPath.substring(0, currentPath.lastIndexOf('/'));
             const magicUrl = `${basePath}/index.html?codigo=${codigo}`;
@@ -228,16 +214,14 @@
             document.getElementById('magic-link-url').value = magicUrl;
             document.getElementById('magic-link-container').classList.remove('hidden');
 
-            // Limpiar y resetear
             document.getElementById('create-user-form').reset();
             btn.disabled = false;
             btn.innerText = "CREAR Y GENERAR ENLACE";
             
-            // Actualizar lista de abajo
             fetchUsers();
         });
 
-        // --- 4. LISTA DE JUGADORES Y RECARGAS ---
+        // LÓGICA LEER USUARIOS
         async function fetchUsers() {
             const container = document.getElementById('users-grid');
             
@@ -247,7 +231,7 @@
                 .order('id', { ascending: false });
 
             if (error) {
-                container.innerHTML = '<div class="text-red-500 font-bold text-center w-full">Error al cargar</div>';
+                container.innerHTML = `<div class="text-red-500 font-bold text-center w-full">Error al cargar: ${error.message}</div>`;
                 return;
             }
 
@@ -280,13 +264,11 @@
                             <span class="font-bold">Rollover:</span> 
                             <span class="font-bold text-slate-800">${user.tiradas_realizadas} / ${user.tiradas_objetivo}</span>
                         </p>
-                        <!-- Barra de progreso -->
                         <div class="w-full bg-slate-200 rounded-full h-2.5 mt-2">
                             <div class="bg-blue-500 h-2.5 rounded-full" style="width: ${progress}%"></div>
                         </div>
                     </div>
 
-                    <!-- Botón de recarga en mano (diseño móvil gigante) -->
                     <button onclick="recargarSaldo('${user.id}', ${user.saldo}, this)" class="mt-auto w-full bg-emerald-500 active:bg-emerald-600 text-white font-black py-3 px-4 rounded-xl transition-transform active:scale-95 shadow-md flex items-center justify-center gap-2 text-base">
                         💵 +10K pts (Recarga)
                     </button>
@@ -313,11 +295,9 @@
                 alert("Error: " + error.message);
             }
 
-            // Recargar la tabla para ver el cambio instantáneo
             fetchUsers();
         }
 
-        // Arrancar la comprobación silenciosa al cargar
         window.addEventListener('DOMContentLoaded', comprobarSesionSilenciosa);
     </script>
 </body>
