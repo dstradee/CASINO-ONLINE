@@ -13,8 +13,6 @@
     
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    
-    <!-- LIBRERÍAS 3D Y ANIMACIÓN -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
 
@@ -47,7 +45,6 @@
 
         header { flex: 0 0 auto; height: 55px; }
 
-        /* --- ZONA 3D CINEMATOGRÁFICA --- */
         #game-area {
             flex: 1 1 0; position: relative; display: flex; flex-direction: column;
             background: radial-gradient(circle at center, #18181b 0%, #000 100%);
@@ -76,7 +73,6 @@
             z-index: 20;
         }
 
-        /* --- CONTROLES DE APUESTA (INTOCADOS VISUALMENTE) --- */
         #controls-area {
             flex: 0 0 auto; background: #09090b; border-top: 1px solid #27272a;
             padding: 12px 16px calc(var(--safe-bottom) + 12px) 16px;
@@ -142,7 +138,6 @@
         <h1 class="text-red-600 text-3xl font-black uppercase text-center px-4">Acceso Denegado<br><span class="text-sm text-zinc-500 mt-2 block">Vuelve al HUB</span></h1>
     </div>
 
-    <!-- CABECERA -->
     <header class="px-3 bg-zinc-900 flex justify-between items-center border-b border-zinc-800 w-full relative z-50">
         <div class="flex items-center w-1/3 h-full gap-2">
             <button onclick="goToHub()" class="flex-none text-zinc-400 hover:text-white transition-colors px-1" title="Volver al HUB">
@@ -159,12 +154,11 @@
         </div>
 
         <div class="flex flex-col items-end w-1/3 h-full justify-center">
-            <span class="text-[9px] text-zinc-500 uppercase font-bold leading-none mb-1">Saldo</span>
+            <span class="text-[9px] text-zinc-500 uppercase font-bold leading-none mb-1">Saldo Disp.</span>
             <span id="player-balance" class="text-sm font-black text-white truncate w-full text-right leading-none">0 <span class="text-[9px] text-zinc-400">bits</span></span>
         </div>
     </header>
 
-    <!-- ZONA 3D (CINEMATOGRÁFICA) -->
     <div id="game-area">
         <div id="canvas-container"></div>
         
@@ -177,7 +171,6 @@
         <div id="history-bar">Historial: <span id="history-text" class="text-zinc-300">...</span></div>
     </div>
 
-    <!-- CONTROLES -->
     <div id="controls-area">
         <div class="flex gap-2 mb-4">
             <button class="option-btn" id="btn-cara" onclick="selectOption('CARA')">CARA<br><span class="text-[10px] normal-case text-zinc-400">Pago 1:1</span></button>
@@ -200,11 +193,8 @@
         </button>
     </div>
 
-    <!-- ==========================================
-         LÓGICA JAVASCRIPT
-         ========================================== -->
     <script>
-        /* --- SUPABASE (INTOCABLE) --- */
+        /* --- SUPABASE --- */
         const { createClient } = supabase;
         const supabaseUrl = 'https://qutkwzjchchhbqfhtaxi.supabase.co';
         const supabaseKey = 'sb_publishable_fv4VSDx-LJrkorzY0bOKaA_0poFJcU1';
@@ -216,10 +206,14 @@
         let currentBet = 100;
         let historyArr = [];
 
-        /* --- VARIABLES THREE.JS --- */
-        let scene, camera, renderer, coin;
+        /* --- THREE.JS --- */
+        let scene, camera, renderer, coin, floor;
 
-        /* --- INICIALIZACIÓN --- */
+        /* Parámetros Físicos Fijos */
+        const COIN_RADIUS = 4;
+        const COIN_THICKNESS = 0.6;
+        const FLOOR_Y = -6; // Nivel estricto del suelo
+
         document.addEventListener('DOMContentLoaded', async () => {
             init3DScene();
 
@@ -268,11 +262,9 @@
             document.getElementById('history-text').innerText = historyArr.join(' · ');
         }
 
-        /* --- CONTROLES APUESTA --- */
         function selectOption(opt) {
             if (isSpinning) return;
             selectedOption = opt;
-            
             document.getElementById('btn-cara').classList.remove('selected');
             document.getElementById('btn-cruz').classList.remove('selected');
             document.getElementById('btn-borde').classList.remove('selected');
@@ -280,7 +272,6 @@
             if(opt === 'CARA') document.getElementById('btn-cara').classList.add('selected');
             if(opt === 'CRUZ') document.getElementById('btn-cruz').classList.add('selected');
             if(opt === 'BORDE') document.getElementById('btn-borde').classList.add('selected');
-
             checkButtonState();
         }
 
@@ -303,7 +294,7 @@
             const btn = document.getElementById('btn-lanzar');
             if (isSpinning) {
                 btn.disabled = true;
-                btn.innerText = "GIRANDO...";
+                btn.innerText = "LANZANDO...";
             } else if (!selectedOption) {
                 btn.disabled = true;
                 btn.innerText = "SELECCIONA APUESTA";
@@ -313,48 +304,41 @@
             }
         }
 
-        /* --- MOTOR THREE.JS Y PROCEDURAL PREMIUM COIN --- */
+        /* --- MOTOR THREE.JS (CORREGIDO PARA CÁMARA Y FÍSICAS REALES) --- */
         function init3DScene() {
             const container = document.getElementById('canvas-container');
-            
-            // 1. Escena y Cámara Cinematográfica
             scene = new THREE.Scene();
-            // Ligera niebla oscura al fondo para dar profundidad de casino
-            scene.fog = new THREE.Fog(0x050505, 10, 40);
+            scene.fog = new THREE.Fog(0x050505, 20, 60); // Niebla alejada
             
-            camera = new THREE.PerspectiveCamera(40, container.clientWidth / container.clientHeight, 0.1, 100);
-            camera.position.set(0, 10, 20); // Ángulo en picado
-            camera.lookAt(0, 0, 0);
+            // CÁMARA ALEJADA Y ELEVADA: Simula mirar una mesa desde arriba/frontal
+            camera = new THREE.PerspectiveCamera(35, container.clientWidth / container.clientHeight, 0.1, 100);
+            camera.position.set(0, 20, 35); // Alta en Y, muy lejos en Z
+            camera.lookAt(0, FLOOR_Y, 0); // Mirando al suelo
 
-            // 2. Renderizador Premium con Sombras
             renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true });
             renderer.setSize(container.clientWidth, container.clientHeight);
             renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
             renderer.shadowMap.enabled = true;
             renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-            renderer.toneMapping = THREE.ACESFilmicToneMapping; // Realismo lumínico
+            renderer.toneMapping = THREE.ACESFilmicToneMapping;
             renderer.outputEncoding = THREE.sRGBEncoding;
             container.appendChild(renderer.domElement);
 
-            // 3. Suelo de Casino (Para recibir sombras proyectadas)
-            const floorGeo = new THREE.PlaneGeometry(50, 50);
-            const floorMat = new THREE.MeshStandardMaterial({ 
-                color: 0x111111, roughness: 0.8, metalness: 0.2
-            });
-            const floor = new THREE.Mesh(floorGeo, floorMat);
+            // SUELO FÍSICO REAL (Plano invisible que recibe sombras y marca el límite de Y)
+            const floorGeo = new THREE.PlaneGeometry(100, 100);
+            const floorMat = new THREE.ShadowMaterial({ opacity: 0.7 }); // Solo dibuja la sombra
+            floor = new THREE.Mesh(floorGeo, floorMat);
             floor.rotation.x = -Math.PI / 2;
-            floor.position.y = -0.5; // Suelo ligeramente debajo
+            floor.position.y = FLOOR_Y; // El suelo estricto
             floor.receiveShadow = true;
             scene.add(floor);
 
-            // 4. Luces Cinematográficas
-            const ambient = new THREE.AmbientLight(0xffffff, 0.4);
+            const ambient = new THREE.AmbientLight(0xffffff, 0.5);
             scene.add(ambient);
 
-            // Luz principal (Key Light) dorada con sombra
-            const spotLight = new THREE.SpotLight(0xfff0dd, 5);
-            spotLight.position.set(-5, 20, 10);
-            spotLight.angle = Math.PI / 6;
+            const spotLight = new THREE.SpotLight(0xfff0dd, 4);
+            spotLight.position.set(5, 30, 10);
+            spotLight.angle = Math.PI / 5;
             spotLight.penumbra = 0.5;
             spotLight.castShadow = true;
             spotLight.shadow.mapSize.width = 1024;
@@ -362,55 +346,42 @@
             spotLight.shadow.bias = -0.001;
             scene.add(spotLight);
 
-            // Luz de borde (Rim Light) para dar volumen metálico
-            const rimLight = new THREE.PointLight(0xffd700, 3, 50);
-            rimLight.position.set(5, -5, -10);
+            const rimLight = new THREE.PointLight(0xffd700, 2, 50);
+            rimLight.position.set(-10, 5, -10);
             scene.add(rimLight);
 
-            // 5. Creación de Moneda Procedural Premium (Sin GLB externo = Cero CORS)
-            // Generamos mapas de normales (Relieve 3D) en memoria vía Canvas
             const mapCara = createMintedBumpMap('CARA');
             const mapCruz = createMintedBumpMap('CRUZ');
             
-            // Material Physical (Más realista que Standard, permite capa transparente)
             const materialCara = new THREE.MeshPhysicalMaterial({ 
                 color: 0xffd700, metalness: 1.0, roughness: 0.3,
-                bumpMap: mapCara, bumpScale: 0.05,
-                clearcoat: 0.3, clearcoatRoughness: 0.2
+                bumpMap: mapCara, bumpScale: 0.05, clearcoat: 0.3
             });
             const materialCruz = new THREE.MeshPhysicalMaterial({ 
                 color: 0xffd700, metalness: 1.0, roughness: 0.3,
-                bumpMap: mapCruz, bumpScale: 0.05,
-                clearcoat: 0.3, clearcoatRoughness: 0.2
+                bumpMap: mapCruz, bumpScale: 0.05, clearcoat: 0.3
             });
-            // El canto de la moneda estriado
             const edgeTexture = createEdgeBumpMap();
             const materialEdge = new THREE.MeshPhysicalMaterial({ 
                 color: 0xcca600, metalness: 1.0, roughness: 0.4,
                 bumpMap: edgeTexture, bumpScale: 0.1
             });
 
-            // Cilindro de alta resolución para imitar moneda
-            const geometry = new THREE.CylinderGeometry(4, 4, 0.6, 128);
-            // CylinderGeometry caras: 0: Canto, 1: Top (Cara), 2: Bottom (Cruz)
+            // Geometría premium intacta
+            const geometry = new THREE.CylinderGeometry(COIN_RADIUS, COIN_RADIUS, COIN_THICKNESS, 128);
             coin = new THREE.Mesh(geometry, [materialEdge, materialCara, materialCruz]);
             coin.castShadow = true;
-            coin.receiveShadow = true;
             
-            // Orientación inicial (Mostrando Cara e inclinada a cámara)
-            coin.rotation.x = Math.PI / 2.5; 
-            coin.position.y = 0;
+            // POSICIÓN INICIAL: Apoyada sobre la mesa mostrando CARA
+            // En un cilindro Three.js, la Tapa Superior (Cara) mira hacia el eje +Y.
+            // Para que quede plana en el suelo, NO rotamos nada.
+            coin.rotation.set(0, 0, 0); 
+            coin.position.set(0, FLOOR_Y + (COIN_THICKNESS / 2), 0); // Exactamente tocando el suelo
             
             scene.add(coin);
 
-            // Loop
             function animate() {
                 requestAnimationFrame(animate);
-                if(!isSpinning) {
-                    // Flote pasivo premium
-                    coin.rotation.y += 0.003;
-                    coin.position.y = Math.sin(Date.now() * 0.002) * 0.2;
-                }
                 renderer.render(scene, camera);
             }
             animate();
@@ -423,39 +394,24 @@
             });
         }
 
-        /* --- GENERADORES PROCEDURALES DE TEXTURA 3D (Relieve) --- */
-        // Usamos Canvas para dibujar texto blanco sobre negro, 
-        // lo que Three.js interpretará como "Elevado" (Blanco) y "Hundido" (Negro) en un bumpMap.
         function createMintedBumpMap(text) {
             const canvas = document.createElement('canvas');
             canvas.width = 1024; canvas.height = 1024;
             const ctx = canvas.getContext('2d');
             
-            // Fondo gris medio (Nivel base de la moneda)
             ctx.fillStyle = '#808080';
             ctx.fillRect(0, 0, 1024, 1024);
 
-            // Borde elevado circular
-            ctx.strokeStyle = '#ffffff'; // Relieve máximo
-            ctx.lineWidth = 30;
-            ctx.beginPath();
-            ctx.arc(512, 512, 480, 0, Math.PI * 2);
-            ctx.stroke();
-            // Bisel interno hundido
-            ctx.strokeStyle = '#404040'; // Relieve bajo
-            ctx.lineWidth = 15;
-            ctx.beginPath();
-            ctx.arc(512, 512, 450, 0, Math.PI * 2);
-            ctx.stroke();
+            ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 30;
+            ctx.beginPath(); ctx.arc(512, 512, 480, 0, Math.PI * 2); ctx.stroke();
+            ctx.strokeStyle = '#404040'; ctx.lineWidth = 15;
+            ctx.beginPath(); ctx.arc(512, 512, 450, 0, Math.PI * 2); ctx.stroke();
 
-            // Texto Marca "Spin Vía" Elevado
             ctx.fillStyle = '#ffffff';
             ctx.font = '900 150px Montserrat, sans-serif';
-            ctx.textAlign = 'center';
-            ctx.textBaseline = 'middle';
+            ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
             ctx.fillText('Spin Vía', 512, 300);
 
-            // Texto CARA / CRUZ Gigante Elevado en el centro
             ctx.font = '900 250px Montserrat, sans-serif';
             ctx.fillText(text, 512, 600);
 
@@ -463,107 +419,126 @@
         }
 
         function createEdgeBumpMap() {
-            // Textura para el canto de la moneda (rayas verticales)
             const canvas = document.createElement('canvas');
             canvas.width = 512; canvas.height = 128;
             const ctx = canvas.getContext('2d');
-            ctx.fillStyle = '#808080';
-            ctx.fillRect(0,0,512,128);
+            ctx.fillStyle = '#808080'; ctx.fillRect(0,0,512,128);
             ctx.fillStyle = '#ffffff';
-            for(let i=0; i<512; i+=8) {
-                ctx.fillRect(i, 0, 4, 128);
-            }
+            for(let i=0; i<512; i+=8) ctx.fillRect(i, 0, 4, 128);
             const tex = new THREE.CanvasTexture(canvas);
-            tex.wrapS = THREE.RepeatWrapping;
-            tex.repeat.set(10, 1); // Repite el patrón alrededor del cilindro
+            tex.wrapS = THREE.RepeatWrapping; tex.repeat.set(10, 1);
             return tex;
         }
 
-        /* --- LÓGICA Y ANIMACIÓN DEL JUEGO --- */
+        /* --- FÍSICAS DE LANZAMIENTO (GSAP) --- */
         async function lanzarMoneda() {
             validateBet();
             if (isSpinning || !selectedOption) return;
-            
-            if (currentBet > currentUser.saldo) {
-                showToast("Saldo insuficiente"); return;
-            }
+            if (currentBet > currentUser.saldo) { showToast("Saldo insuficiente"); return; }
 
-            // BLOQUEAR Y COBRAR (Transacción atómica antes de animar)
             isSpinning = true;
             checkButtonState();
+            
             currentUser.saldo -= currentBet;
             updateBalanceUI();
             
             document.getElementById('result-banner').classList.remove('show');
 
-            // 1. DETERMINAR RESULTADO MATEMÁTICAMENTE (INTOCABLE)
+            // 1. RESULTADO LÓGICO INTOCADO
             const rand = Math.random();
             let result = '';
-            // 45% CARA, 45% CRUZ, 10% BORDE
             if (rand < 0.45) result = 'CARA';
             else if (rand < 0.90) result = 'CRUZ';
             else result = 'BORDE';
 
-            // 2. FÍSICAS GSAP: Volar, Girar y Caer
+            // 2. FÍSICAS REALISTAS SOBRE LA MESA
             const tl = gsap.timeline({ onComplete: () => procesarResultado(result) });
             
-            // Reseteo posicional
-            coin.position.set(0, 0, 0);
+            // Garantizamos posición inicial sobre la mesa
+            coin.position.set(0, FLOOR_Y + (COIN_THICKNESS / 2), 0);
             coin.rotation.set(0, 0, 0);
 
-            // Calcular Rotación Final Exacta según el resultado
-            // Cylinder: Top=CARA (+Y), Bottom=CRUZ (-Y)
-            let targetRotX, targetRotY = 0, targetRotZ = 0;
-            const extraSpinsX = Math.PI * 2 * 10; // 10 vueltas completas vertiginosas
-            const extraSpinsZ = Math.PI * 2 * 4;  // Caos en los ejes
+            let targetRotX = 0;
+            let targetRotY = 0;
+            let targetRotZ = 0;
+            let targetPosY = 0;
+
+            const extraSpins = Math.PI * 2 * 6; // 6 vueltas completas en el aire en el eje X
 
             if (result === 'CARA') {
-                targetRotX = Math.PI / 2 + extraSpinsX;
-            } else if (result === 'CRUZ') {
-                targetRotX = -Math.PI / 2 + extraSpinsX;
-            } else {
-                // BORDE: Cae de pie. 
-                targetRotX = 0 + extraSpinsX; // Queda en Y=0 (Vertical)
-                targetRotY = Math.PI / 6;     // Ligeramente girada hacia cámara para ver el canto y un poco de la cara
+                // Tapa superior mirando hacia Y positivo. 
+                targetRotX = extraSpins + 0; // Rotación neutra
+                targetRotZ = 0;
+                targetPosY = FLOOR_Y + (COIN_THICKNESS / 2); // Tumbada plana
+            } 
+            else if (result === 'CRUZ') {
+                // Tapa inferior (CRUZ) mirando hacia Y positivo. Se voltea 180º (Math.PI)
+                targetRotX = extraSpins + Math.PI; 
+                targetRotZ = 0;
+                targetPosY = FLOOR_Y + (COIN_THICKNESS / 2); // Tumbada plana
+            } 
+            else { // BORDE
+                // Cae de canto. Girada 90º (Math.PI/2) en el eje X.
+                targetRotX = extraSpins + (Math.PI / 2); 
+                targetRotY = Math.PI / 6; // Ligeramente girada hacia cámara para apreciar el canto
+                targetPosY = FLOOR_Y + COIN_RADIUS; // Apoyada sobre su radio, no sobre el grosor
             }
 
-            // A. Salto hacia la cámara y arriba
-            tl.to(coin.position, { y: 18, z: 5, duration: 1.5, ease: "power2.out" }, 0);
+            // TRAYECTORIA DE ASCENSO Y VUELTAS CAÓTICAS EN EL AIRE
+            // Subimos hasta Y=20 (Sin salir del plano de cámara gracias al nuevo ángulo)
+            tl.to(coin.position, { y: 20, duration: 1.2, ease: "power2.out" }, 0);
             
-            // B. Giro rápido en el aire (Combina X y Z para efecto esférico natural)
-            tl.to(coin.rotation, { x: targetRotX / 2, z: extraSpinsZ, duration: 1.5, ease: "power1.inOut" }, 0);
+            // Gira en X y tambalea ligeramente en Z durante el ascenso/descenso
+            tl.to(coin.rotation, { 
+                x: targetRotX, 
+                z: Math.PI * 2, // Rotación caótica para efecto moneda tirada
+                duration: 2.2, 
+                ease: "power1.inOut" 
+            }, 0);
 
-            // C. Caída
+            // TRAYECTORIA DE DESCENSO, COLISIÓN Y REBOTE
+            tl.to(coin.position, { 
+                y: targetPosY, 
+                duration: 1.0, 
+                ease: "bounce.out" // Motor de rebotes físicos automático de GSAP
+            }, 1.2); // Empieza a caer después del ascenso (1.2s)
+
+            // ESTABILIZACIÓN FINAL SI ES BORDE
             if (result === 'BORDE') {
-                // El radio del cilindro es 4. Para apoyarse en el suelo (y=-0.5), pos.y debe ser aprox 3.5
-                tl.to(coin.position, { y: 3.5, z: 0, duration: 1.2, ease: "bounce.out" }, 1.5);
-                tl.to(coin.rotation, { x: targetRotX, y: targetRotY, z: 0, duration: 1.2, ease: "power2.out" }, 1.5);
-                // Tambaleo agónico antes de frenar (Wobble)
-                tl.to(coin.rotation, { z: 0.15, duration: 0.1, yoyo: true, repeat: 7, ease: "sine.inOut" }, 2.7);
-                tl.to(coin.rotation, { z: 0, duration: 0.3, ease: "power2.out" }, 3.4);
+                // El rebote en posición vertical hace que la moneda se tambalee antes de frenar (Wobble effect en Z)
+                tl.to(coin.rotation, { 
+                    y: targetRotY, z: 0, 
+                    duration: 1.0, ease: "power2.out" 
+                }, 1.2);
+                
+                // Tambaleo final agónico apoyada en el suelo
+                tl.to(coin.rotation, { 
+                    x: targetRotX + 0.1, duration: 0.15, yoyo: true, repeat: 3, ease: "sine.inOut" 
+                }, 2.2);
+                tl.to(coin.rotation, { 
+                    x: targetRotX, duration: 0.2, ease: "power2.out" 
+                }, 2.65);
             } else {
-                // Cae plana. Pos Y casi 0.
-                tl.to(coin.position, { y: 0, z: 0, duration: 1.5, ease: "bounce.out" }, 1.5);
-                tl.to(coin.rotation, { x: targetRotX, y: 0, z: 0, duration: 1.5, ease: "power2.out" }, 1.5);
+                // Para Cara y Cruz se asegura de quedar plana a ras de suelo al acabar el rebote
+                tl.to(coin.rotation, { 
+                    y: 0, z: 0, 
+                    duration: 1.0, ease: "power2.out" 
+                }, 1.2);
             }
         }
 
-        /* --- PROCESAMIENTO Y PAGOS --- */
         async function procesarResultado(result) {
             updateHistory(result);
 
             let winAmount = 0;
             let isWin = (selectedOption === result);
 
-            // Pagos Matemáticos Inalterados
             if (isWin) {
-                if (result === 'CARA' || result === 'CRUZ') winAmount = currentBet * 2; // 1:1
-                else if (result === 'BORDE') winAmount = currentBet * 9;                // 8:1
-                
+                if (result === 'CARA' || result === 'CRUZ') winAmount = currentBet * 2; 
+                else if (result === 'BORDE') winAmount = currentBet * 9;                
                 currentUser.saldo += winAmount;
             }
 
-            // Guardado en Supabase (Bloqueado por isSpinning para evitar bugs atómicos)
             const { error } = await supabaseClient.from('usuarios').update({ 
                 saldo: currentUser.saldo 
             }).eq('id', currentUser.id);
@@ -575,7 +550,6 @@
 
             updateBalanceUI();
 
-            // PRESENTACIÓN VISUAL PREMIUM
             const banner = document.getElementById('result-banner');
             const title = document.getElementById('result-title');
             const sub = document.getElementById('result-subtitle');
