@@ -265,6 +265,7 @@
                 <h3 class="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-500 mb-3 px-1">Juegos Disponibles</h3>
                 
                 <div class="grid grid-cols-1 gap-4">
+                    <!-- MEGA FIRE ROULETTE -->
                     <div onclick="goToRoulette()" class="hub-game-card rounded-2xl p-1 relative group cursor-pointer">
                         <div class="absolute inset-0 bg-red-600/10 opacity-0 group-hover:opacity-100 transition-opacity rounded-2xl"></div>
                         <div class="border border-zinc-800/50 bg-black/40 rounded-xl p-5 flex flex-col items-center text-center relative z-10">
@@ -277,7 +278,7 @@
                         </div>
                     </div>
 
-                    <!-- AQUÍ ESTÁ EL FIX ESPECÍFICO DE URL ENCODING -->
+                    <!-- CARA O CRUZ -->
                     <div onclick="goToCaraOCruz()" class="hub-card rounded-2xl p-1 relative group cursor-pointer border border-zinc-700/50 hover:border-yellow-500/50 transition-colors">
                         <div class="border border-zinc-800/50 bg-black/40 rounded-xl p-5 flex flex-col items-center text-center relative z-10">
                             <div class="coin-3d mb-4"></div>
@@ -288,6 +289,19 @@
                             </div>
                         </div>
                     </div>
+
+                    <!-- CRASH (Nuevo) -->
+                    <div onclick="goToCrash()" class="hub-card rounded-2xl p-1 relative group cursor-pointer border border-zinc-700/50 hover:border-yellow-500/50 transition-colors">
+                        <div class="border border-zinc-800/50 bg-black/40 rounded-xl p-5 flex flex-col items-center text-center relative z-10">
+                            <div class="text-5xl mb-4 filter drop-shadow-[0_0_15px_rgba(234,179,8,0.6)]">🚀</div>
+                            <h4 class="text-xl font-black text-white uppercase tracking-widest mb-1">Crash</h4>
+                            <p class="text-[10px] text-zinc-400 font-bold uppercase tracking-[0.3em] mb-4">Multiplier</p>
+                            <div class="w-full py-2.5 bg-zinc-800 border border-zinc-600 rounded text-white font-black uppercase tracking-widest text-xs shadow-md flex justify-center items-center gap-2">
+                                Jugar <span class="text-lg leading-none">→</span>
+                            </div>
+                        </div>
+                    </div>
+
                 </div>
             </div>
         </div>
@@ -332,12 +346,16 @@
             <div id="phase-text" class="absolute top-1 text-[9px] font-black uppercase tracking-[0.2em] text-blue-400 z-40 bg-black/60 px-2 py-1 rounded-full border border-blue-500/30">
                 APUESTAS ABIERTAS
             </div>
+            
             <div id="wheel-wrapper" class="wheel-wrapper">
                 <div class="wheel-pointer" id="wheel-pointer"></div>
                 <div id="wheel-svg" class="wheel-svg"></div>
-                <div id="ball-orbit" class="ball-orbit"><div class="roulette-ball" id="r-ball"></div></div>
+                <div id="ball-orbit" class="ball-orbit">
+                    <div class="roulette-ball" id="r-ball"></div>
+                </div>
                 <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[30%] h-[30%] bg-zinc-900 border border-zinc-700 rounded-full z-20 box-shadow-[inset_0_0_10px_black]"></div>
             </div>
+
             <div id="results-history"></div>
         </div>
 
@@ -410,7 +428,7 @@
         </div>
     </div> <!-- FIN VIEW BETTING -->
 
-    <!-- LÓGICA JAVASCRIPT DE ROULETTE (INTOCABLE) -->
+    <!-- LÓGICA JAVASCRIPT DE ROULETTE Y HUB (INTOCABLE) -->
     <script>
         const { createClient } = supabase;
         const supabaseUrl = 'https://qutkwzjchchhbqfhtaxi.supabase.co';
@@ -452,15 +470,20 @@
             }
         }
 
-        /* 
-           --- FUNCIÓN REPARADA EXACTAMENTE AQUÍ --- 
-           Codifica los espacios (%20) para evitar que Vercel y los navegadores móviles rompan la redirección a un archivo que contiene espacios literales.
-        */
         function goToCaraOCruz() {
             const urlParams = new URLSearchParams(window.location.search);
             const codigo = urlParams.get('codigo');
             if(codigo) {
                 window.location.href = 'cara%20o%20cruz.html?codigo=' + codigo;
+            }
+        }
+        
+        // --- FUNCIÓN PARA REDIRIGIR A CRASH (NUEVA) ---
+        function goToCrash() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const codigo = urlParams.get('codigo');
+            if(codigo) {
+                window.location.href = 'crash.html?codigo=' + codigo;
             }
         }
 
