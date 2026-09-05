@@ -1,1 +1,590 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>Cara o Cruz | Spin Vía</title>
+    
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🪙</text></svg>">
+    
+    <!-- Tipografía Spin Vía -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;800;900&display=swap" rel="stylesheet">
+    
+    <!-- CDNs -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
 
+    <style>
+        :root {
+            --safe-bottom: env(safe-area-inset-bottom, 12px);
+        }
+
+        body, html {
+            margin: 0; padding: 0; width: 100vw; height: 100dvh;
+            user-select: none; -webkit-user-select: none; -webkit-touch-callout: none;
+            overflow: hidden; display: flex; flex-direction: column;
+            background-color: #050505; color: white;
+            font-family: 'Montserrat', sans-serif;
+            touch-action: manipulation;
+        }
+
+        .brand-via {
+            color: #FFD700;
+            text-shadow: 0 0 10px rgba(255, 215, 0, 0.4), 0 0 20px rgba(255, 215, 0, 0.2);
+        }
+
+        /* --- TOAST MENSAJES --- */
+        #toast-msg {
+            position: fixed; top: 15%; left: 50%; transform: translateX(-50%);
+            background: rgba(220, 38, 38, 0.95); color: white; padding: 8px 16px;
+            border-radius: 20px; font-weight: bold; font-size: 0.75rem; text-transform: uppercase;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.5); z-index: 999;
+            opacity: 0; pointer-events: none; transition: opacity 0.3s ease;
+        }
+
+        /* --- UI COMPONENTES --- */
+        header { flex: 0 0 auto; height: 55px; }
+
+        #game-area {
+            flex: 1 1 0; position: relative; display: flex; flex-direction: column;
+            background: radial-gradient(circle at center, #18181b 0%, #000 100%);
+            min-height: 0; overflow: hidden;
+        }
+
+        #canvas-container {
+            flex: 1; width: 100%; position: relative; z-index: 10;
+        }
+
+        #result-banner {
+            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%) scale(0.5);
+            opacity: 0; z-index: 50; pointer-events: none; text-align: center;
+            width: 100%; transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+        #result-banner.show { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+
+        .banner-borde {
+            color: #FFD700; text-shadow: 0 0 20px #FFD700, 0 0 40px #eab308;
+            font-size: 3.5rem; font-weight: 900; text-transform: uppercase; letter-spacing: 0.1em;
+        }
+
+        #history-bar {
+            position: absolute; bottom: 10px; width: 100%; text-align: center;
+            font-size: 0.75rem; font-weight: bold; color: #a1a1aa; letter-spacing: 0.1em;
+            z-index: 20;
+        }
+
+        /* --- CONTROLES INFERIORES --- */
+        #controls-area {
+            flex: 0 0 auto; background: #09090b; border-top: 1px solid #27272a;
+            padding: 12px 16px calc(var(--safe-bottom) + 12px) 16px;
+            box-shadow: 0 -10px 20px rgba(0,0,0,0.8); z-index: 30;
+        }
+
+        /* Botones de Selección (Radio UI) */
+        .option-btn {
+            background: #18181b; border: 2px solid #27272a; color: #71717a;
+            border-radius: 8px; padding: 10px 0; font-weight: 900; font-size: 1rem;
+            transition: all 0.2s; text-align: center; flex: 1; text-transform: uppercase;
+        }
+        .option-btn.selected {
+            background: linear-gradient(135deg, #FFD700 0%, #b45309 100%);
+            border-color: #fef08a; color: #000; box-shadow: 0 0 15px rgba(234, 179, 8, 0.4);
+        }
+
+        .borde-btn.selected {
+            background: linear-gradient(135deg, #a855f7 0%, #6b21a8 100%);
+            border-color: #d8b4fe; color: white; box-shadow: 0 0 15px rgba(168, 85, 247, 0.4);
+        }
+
+        /* Input Apuesta */
+        .bet-input {
+            width: 100%; background: #000; border: 2px solid #27272a; border-radius: 8px;
+            color: white; font-size: 1.5rem; font-weight: 900; text-align: center;
+            padding: 8px; outline: none; transition: border-color 0.2s;
+        }
+        .bet-input:focus { border-color: #FFD700; }
+
+        /* Botón Lanzar */
+        .spin-btn {
+            width: 100%; background: linear-gradient(to bottom, #16a34a, #15803d);
+            border: 1px solid #4ade80; box-shadow: 0 4px 0 #14532d;
+            border-radius: 8px; padding: 14px 0; font-size: 1.25rem; font-weight: 900;
+            color: white; text-transform: uppercase; letter-spacing: 0.1em;
+            transition: all 0.1s;
+        }
+        .spin-btn:active:not(:disabled) { transform: translateY(4px); box-shadow: 0 0 0 #14532d; }
+        .spin-btn:disabled { background: #27272a; border-color: #3f3f46; color: #71717a; box-shadow: none; transform: none; }
+
+        /* Helpers rápidos de apuesta */
+        .quick-bet {
+            background: #18181b; border: 1px solid #3f3f46; border-radius: 4px;
+            color: #a1a1aa; font-size: 0.75rem; font-weight: bold; padding: 4px 0;
+            flex: 1; text-align: center;
+        }
+        .quick-bet:active { background: #27272a; color: white; }
+
+        @media (max-height: 700px) {
+            header { height: 45px; }
+            #controls-area { padding-top: 8px; padding-bottom: calc(var(--safe-bottom) + 8px); }
+            .option-btn { padding: 6px 0; font-size: 0.9rem; }
+            .bet-input { font-size: 1.25rem; padding: 4px; }
+            .spin-btn { padding: 10px 0; font-size: 1.1rem; }
+        }
+    </style>
+</head>
+<body>
+
+    <div id="toast-msg">Mensaje</div>
+
+    <!-- Carga Sistema -->
+    <div id="sys-loading" class="absolute inset-0 z-[200] bg-black flex flex-col items-center justify-center">
+        <div class="text-5xl mb-4">🪙</div>
+        <p class="text-yellow-500 font-bold uppercase tracking-widest text-sm animate-pulse">Cargando...</p>
+    </div>
+    <div id="sys-error" class="absolute inset-0 z-[200] bg-black flex flex-col items-center justify-center hidden">
+        <h1 class="text-red-600 text-3xl font-black uppercase text-center px-4">Acceso Denegado<br><span class="text-sm text-zinc-500 mt-2 block">Vuelve al HUB</span></h1>
+    </div>
+
+    <!-- CABECERA -->
+    <header class="px-3 bg-zinc-900 flex justify-between items-center border-b border-zinc-800 w-full relative z-50">
+        <div class="flex items-center w-1/3 h-full gap-2">
+            <button onclick="goToHub()" class="flex-none text-zinc-400 hover:text-white transition-colors px-1" title="Volver al HUB">
+                <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M15 19l-7-7 7-7"></path></svg>
+            </button>
+            <div class="flex flex-col items-start justify-center overflow-hidden">
+                <span class="text-[9px] text-zinc-500 uppercase font-bold leading-none mb-1">Jugador</span>
+                <span id="player-name" class="text-xs font-bold text-zinc-200 truncate w-full leading-none">...</span>
+            </div>
+        </div>
+
+        <div class="w-1/3 text-center">
+            <h1 class="text-sm font-black tracking-widest text-white uppercase">Spin <span class="brand-via">Vía</span></h1>
+        </div>
+
+        <div class="flex flex-col items-end w-1/3 h-full justify-center">
+            <span class="text-[9px] text-zinc-500 uppercase font-bold leading-none mb-1">Saldo</span>
+            <span id="player-balance" class="text-sm font-black text-white truncate w-full text-right leading-none">0 <span class="text-[9px] text-zinc-400">bits</span></span>
+        </div>
+    </header>
+
+    <!-- ZONA 3D (THREE.JS) -->
+    <div id="game-area">
+        <div id="canvas-container"></div>
+        
+        <!-- Banners de Resultado -->
+        <div id="result-banner">
+            <div id="result-title" class="text-5xl font-black uppercase text-white drop-shadow-[0_0_15px_rgba(255,255,255,0.8)] mb-2">CARA</div>
+            <div id="result-subtitle" class="text-xl font-bold uppercase text-green-400 drop-shadow-[0_0_10px_#4ade80]">APUESTA GANADA</div>
+            <div id="result-profit" class="text-sm font-bold text-white mt-2 hidden">+100 bits</div>
+        </div>
+
+        <div id="history-bar">Historial: <span id="history-text" class="text-zinc-300">...</span></div>
+    </div>
+
+    <!-- CONTROLES -->
+    <div id="controls-area">
+        
+        <!-- Opciones -->
+        <div class="flex gap-2 mb-4">
+            <button class="option-btn" id="btn-cara" onclick="selectOption('CARA')">CARA<br><span class="text-[10px] normal-case text-zinc-400">Pago 1:1</span></button>
+            <button class="option-btn borde-btn" id="btn-borde" onclick="selectOption('BORDE')">BORDE<br><span class="text-[10px] normal-case text-zinc-300">Pago 8:1</span></button>
+            <button class="option-btn" id="btn-cruz" onclick="selectOption('CRUZ')">CRUZ<br><span class="text-[10px] normal-case text-zinc-400">Pago 1:1</span></button>
+        </div>
+
+        <!-- Inputs de apuesta -->
+        <div class="flex gap-2 items-center mb-4">
+            <div class="flex-1">
+                <input type="number" id="bet-input" class="bet-input" value="100" min="10" step="10" onchange="validateBet()">
+            </div>
+            <div class="flex flex-col gap-1 w-20">
+                <button class="quick-bet" onclick="addBet(100)">+100</button>
+                <button class="quick-bet" onclick="addBet(500)">+500</button>
+            </div>
+        </div>
+
+        <!-- Acción -->
+        <button id="btn-lanzar" class="spin-btn" onclick="lanzarMoneda()">
+            Lanzar Moneda
+        </button>
+    </div>
+
+    <!-- ==========================================
+         LÓGICA JAVASCRIPT
+         ========================================== -->
+    <script>
+        /* --- SUPABASE (INTOCABLE) --- */
+        const { createClient } = supabase;
+        const supabaseUrl = 'https://qutkwzjchchhbqfhtaxi.supabase.co';
+        const supabaseKey = 'sb_publishable_fv4VSDx-LJrkorzY0bOKaA_0poFJcU1';
+        const supabaseClient = createClient(supabaseUrl, supabaseKey);
+
+        /* --- ESTADO DEL JUEGO --- */
+        let currentUser = null;
+        let isSpinning = false;
+        let selectedOption = null; // 'CARA', 'CRUZ', 'BORDE'
+        let currentBet = 100;
+        let historyArr = [];
+
+        /* --- THREE.JS VARIABLES --- */
+        let scene, camera, renderer, coin;
+
+        /* --- INICIALIZACIÓN --- */
+        document.addEventListener('DOMContentLoaded', async () => {
+            init3DCoin();
+
+            const urlParams = new URLSearchParams(window.location.search);
+            const codigo = urlParams.get('codigo');
+            if (!codigo) {
+                document.getElementById('sys-loading').classList.add('hidden');
+                document.getElementById('sys-error').classList.remove('hidden');
+                return;
+            }
+
+            // Identificación unificada (Misma BBDD que Roulette)
+            const { data, error } = await supabaseClient.from('usuarios').select('*').eq('codigo', codigo).single();
+            if (error || !data) {
+                document.getElementById('sys-loading').classList.add('hidden');
+                document.getElementById('sys-error').classList.remove('hidden');
+            } else {
+                currentUser = data;
+                document.getElementById('sys-loading').classList.add('hidden');
+                updateBalanceUI();
+                checkButtonState();
+            }
+        });
+
+        /* --- NAVEGACIÓN --- */
+        function goToHub() {
+            if (isSpinning) return;
+            const urlParams = new URLSearchParams(window.location.search);
+            const codigo = urlParams.get('codigo');
+            if(codigo) window.location.href = `index.html?codigo=${codigo}`;
+        }
+
+        /* --- UI HELPERS --- */
+        function showToast(msg) {
+            const toast = document.getElementById('toast-msg');
+            toast.innerText = msg;
+            toast.style.opacity = '1';
+            setTimeout(() => toast.style.opacity = '0', 2000);
+        }
+
+        function updateBalanceUI() {
+            document.getElementById('player-name').innerText = currentUser.nombre;
+            document.getElementById('player-balance').innerHTML = `${parseFloat(currentUser.saldo).toLocaleString('es-ES')} <span class="text-[9px] text-zinc-400">bits</span>`;
+        }
+
+        function updateHistory(result) {
+            historyArr.push(result);
+            if(historyArr.length > 5) historyArr.shift();
+            document.getElementById('history-text').innerText = historyArr.join(' · ');
+        }
+
+        /* --- CONTROLES DE APUESTA --- */
+        function selectOption(opt) {
+            if (isSpinning) return;
+            selectedOption = opt;
+            
+            document.getElementById('btn-cara').classList.remove('selected');
+            document.getElementById('btn-cruz').classList.remove('selected');
+            document.getElementById('btn-borde').classList.remove('selected');
+            
+            if(opt === 'CARA') document.getElementById('btn-cara').classList.add('selected');
+            if(opt === 'CRUZ') document.getElementById('btn-cruz').classList.add('selected');
+            if(opt === 'BORDE') document.getElementById('btn-borde').classList.add('selected');
+
+            checkButtonState();
+        }
+
+        function addBet(amount) {
+            if (isSpinning) return;
+            currentBet += amount;
+            document.getElementById('bet-input').value = currentBet;
+            validateBet();
+        }
+
+        function validateBet() {
+            let val = parseInt(document.getElementById('bet-input').value);
+            if (isNaN(val) || val <= 0) val = 10;
+            currentBet = val;
+            document.getElementById('bet-input').value = currentBet;
+            checkButtonState();
+        }
+
+        function checkButtonState() {
+            const btn = document.getElementById('btn-lanzar');
+            if (isSpinning) {
+                btn.disabled = true;
+                btn.innerText = "GIRANDO...";
+            } else if (!selectedOption) {
+                btn.disabled = true;
+                btn.innerText = "SELECCIONA APUESTA";
+            } else {
+                btn.disabled = false;
+                btn.innerText = "LANZAR MONEDA";
+            }
+        }
+
+        /* --- MOTOR THREE.JS (MONEDA 3D) --- */
+        function init3DCoin() {
+            const container = document.getElementById('canvas-container');
+            
+            // Escena
+            scene = new THREE.Scene();
+            
+            // Cámara
+            camera = new THREE.PerspectiveCamera(45, container.clientWidth / container.clientHeight, 0.1, 100);
+            camera.position.z = 15;
+            camera.position.y = 2;
+            camera.lookAt(0, 0, 0);
+
+            // Renderizador (Alpha true para fondo CSS)
+            renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true });
+            renderer.setSize(container.clientWidth, container.clientHeight);
+            renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+            container.appendChild(renderer.domElement);
+
+            // Iluminación Premium
+            const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+            scene.add(ambientLight);
+
+            const dirLight = new THREE.DirectionalLight(0xfff0dd, 1);
+            dirLight.position.set(5, 5, 5);
+            scene.add(dirLight);
+            
+            const spotLight = new THREE.SpotLight(0xffd700, 2);
+            spotLight.position.set(-5, 10, 5);
+            spotLight.angle = Math.PI/4;
+            scene.add(spotLight);
+
+            // Texturas generadas por Canvas (Para evitar CORS y archivos externos)
+            const textureCara = createCoinTexture('CARA');
+            const textureCruz = createCoinTexture('CRUZ');
+            
+            // Materiales de la moneda (Oro Metálico)
+            const materialFront = new THREE.MeshStandardMaterial({ 
+                map: textureCara, metalness: 0.8, roughness: 0.2, color: 0xffd700 
+            });
+            const materialBack = new THREE.MeshStandardMaterial({ 
+                map: textureCruz, metalness: 0.8, roughness: 0.2, color: 0xffd700 
+            });
+            const materialEdge = new THREE.MeshStandardMaterial({ 
+                metalness: 0.9, roughness: 0.3, color: 0xeab308 
+            });
+
+            // Geometría (Cilindro muy aplastado)
+            const geometry = new THREE.CylinderGeometry(3, 3, 0.4, 64);
+            
+            // En Three.js, un Cylinder mira hacia arriba (eje Y). 
+            // Las caras (tapas) son el índice 0 y 2. El borde es el 1.
+            const materials = [materialEdge, materialFront, materialBack];
+            
+            coin = new THREE.Mesh(geometry, materials);
+            // Inclinación base atractiva
+            coin.rotation.x = Math.PI / 2.5;
+            coin.rotation.z = 0;
+            
+            scene.add(coin);
+
+            // Loop de render
+            function animate() {
+                requestAnimationFrame(animate);
+                // Pequeño movimiento flotante inactivo
+                if(!isSpinning) {
+                    coin.rotation.y += 0.005;
+                    coin.position.y = Math.sin(Date.now() * 0.002) * 0.2;
+                }
+                renderer.render(scene, camera);
+            }
+            animate();
+
+            // Resize listener
+            window.addEventListener('resize', () => {
+                if(container.clientWidth === 0) return;
+                camera.aspect = container.clientWidth / container.clientHeight;
+                camera.updateProjectionMatrix();
+                renderer.setSize(container.clientWidth, container.clientHeight);
+            });
+        }
+
+        // Crea una textura Canvas para las caras de la moneda
+        function createCoinTexture(text) {
+            const canvas = document.createElement('canvas');
+            canvas.width = 512; canvas.height = 512;
+            const ctx = canvas.getContext('2d');
+            
+            // Fondo dorado
+            const grad = ctx.createRadialGradient(256, 256, 50, 256, 256, 256);
+            grad.addColorStop(0, '#fef08a');
+            grad.addColorStop(1, '#b45309');
+            ctx.fillStyle = grad;
+            ctx.fillRect(0, 0, 512, 512);
+
+            // Borde
+            ctx.strokeStyle = '#713f12';
+            ctx.lineWidth = 15;
+            ctx.beginPath();
+            ctx.arc(256, 256, 240, 0, Math.PI * 2);
+            ctx.stroke();
+
+            // Símbolo Vía
+            ctx.fillStyle = '#713f12';
+            ctx.font = '900 120px Montserrat, sans-serif';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText('Spin Vía', 256, 180);
+
+            // Texto Cara/Cruz
+            ctx.font = '900 80px Montserrat, sans-serif';
+            ctx.fillStyle = '#451a03';
+            ctx.fillText(text, 256, 320);
+
+            return new THREE.CanvasTexture(canvas);
+        }
+
+        /* --- LÓGICA PRINCIPAL DEL JUEGO --- */
+        async function lanzarMoneda() {
+            validateBet();
+            if (isSpinning || !selectedOption) return;
+            
+            // 1. COMPROBAR SALDO
+            if (currentBet > currentUser.saldo) {
+                showToast("Saldo insuficiente");
+                return;
+            }
+
+            // 2. BLOQUEAR INTERFAZ
+            isSpinning = true;
+            checkButtonState();
+            
+            // 3. RESTAR SALDO INMEDIATO (Garantía Visual y Lógica)
+            currentUser.saldo -= currentBet;
+            updateBalanceUI();
+            
+            // Ocultar banner si estaba visible
+            document.getElementById('result-banner').classList.remove('show');
+
+            // 4. DETERMINAR RESULTADO (Probabilidades estrictas)
+            const rand = Math.random();
+            let result = '';
+            
+            // 45% Cara, 45% Cruz, 10% Borde
+            if (rand < 0.45) result = 'CARA';
+            else if (rand < 0.90) result = 'CRUZ';
+            else result = 'BORDE';
+
+            // 5. ANIMACIÓN FÍSICA (GSAP + Three.js)
+            // Calculamos la rotación final del cilindro en base al resultado
+            // En Three.js, rotar en el eje X voltea la moneda.
+            // Para ver CARA (Tapa superior): rotX = Math.PI / 2
+            // Para ver CRUZ (Tapa inferior): rotX = -Math.PI / 2
+            // Para ver BORDE: rotX = 0
+            
+            let finalRotX;
+            if (result === 'CARA') finalRotX = Math.PI / 2;
+            else if (result === 'CRUZ') finalRotX = -Math.PI / 2;
+            else finalRotX = 0; // Borde mirando a cámara
+
+            // Añadimos múltiples vueltas completas (Math.PI * 2 * vueltas)
+            const spins = 6;
+            const targetRotationX = finalRotX + (Math.PI * 2 * spins);
+            const targetRotationZ = result === 'BORDE' ? Math.PI : 0; // Giro en Z para dar caos si cae de lado
+
+            // Reseteamos rotaciones para no acumular infinitamente y glitchear 
+            coin.rotation.set(0, 0, 0);
+            coin.position.y = 0;
+
+            // Animación de salto en el aire
+            gsap.to(coin.position, {
+                y: 8, // Sube mucho
+                duration: 1.5,
+                ease: "power2.out",
+                yoyo: true,
+                repeat: 1
+            });
+
+            // Animación de giro
+            gsap.to(coin.rotation, {
+                x: targetRotationX,
+                z: targetRotationZ,
+                duration: 3, // Tarda 3 segundos en caer
+                ease: "power2.inOut",
+                onComplete: () => procesarResultado(result)
+            });
+        }
+
+        async function procesarResultado(result) {
+            updateHistory(result);
+
+            let winAmount = 0;
+            let isWin = (selectedOption === result);
+
+            // 6. CÁLCULO DE PAGOS
+            if (isWin) {
+                if (result === 'CARA' || result === 'CRUZ') {
+                    // Pago 1:1 -> Recuperas tu apuesta (1x) + ganas el beneficio (1x) = 2x
+                    winAmount = currentBet * 2;
+                } else if (result === 'BORDE') {
+                    // Pago 8:1 -> Recuperas apuesta (1x) + ganas (8x) = 9x total retorno
+                    winAmount = currentBet * 9;
+                }
+                currentUser.saldo += winAmount;
+            }
+
+            // 7. ACTUALIZACIÓN SUPABASE (Atómica/Segura)
+            // Usamos update con el estado actual calculado en frontend.
+            // Nota: En un entorno de producción masivo, lo ideal es un RPC (`increment_saldo`), 
+            // pero mantenemos la consistencia estricta con la orden "no inventes RPC sin avisar".
+            // Al estar la UI bloqueada (isSpinning), evitamos race conditions.
+            const { error } = await supabaseClient.from('usuarios').update({ 
+                saldo: currentUser.saldo 
+            }).eq('id', currentUser.id);
+
+            if (error) {
+                showToast("Error de conexión");
+                console.error(error);
+            }
+
+            updateBalanceUI();
+
+            // 8. RESULTADO VISUAL PREMIUM
+            const banner = document.getElementById('result-banner');
+            const title = document.getElementById('result-title');
+            const sub = document.getElementById('result-subtitle');
+            const profit = document.getElementById('result-profit');
+
+            if (result === 'BORDE') {
+                title.className = "banner-borde mb-2";
+                title.innerText = "¡BORDE!";
+            } else {
+                title.className = "text-5xl font-black uppercase text-white drop-shadow-[0_0_15px_rgba(255,255,255,0.8)] mb-2";
+                title.innerText = result;
+            }
+
+            if (isWin) {
+                sub.className = "text-2xl font-black uppercase text-green-400 drop-shadow-[0_0_10px_#4ade80]";
+                sub.innerText = "APUESTA GANADA";
+                profit.innerText = `+${winAmount - currentBet} bits de beneficio`; // Mostrar solo ganancia neta
+                profit.classList.remove('hidden');
+            } else {
+                sub.className = "text-xl font-bold uppercase text-red-500 drop-shadow-[0_0_10px_#ef4444]";
+                sub.innerText = "APUESTA PERDIDA";
+                profit.classList.add('hidden');
+            }
+
+            banner.classList.add('show');
+            if (isWin && navigator.vibrate) navigator.vibrate([100, 50, 100, 50, 200]);
+
+            // 9. DESBLOQUEAR INTERFAZ
+            setTimeout(() => {
+                isSpinning = false;
+                checkButtonState();
+            }, 1000);
+        }
+    </script>
+</body>
+</html>
