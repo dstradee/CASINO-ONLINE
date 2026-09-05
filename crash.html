@@ -13,6 +13,7 @@
     
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
 
     <style>
         :root {
@@ -180,14 +181,16 @@
     </header>
 
     <!-- HISTORIAL -->
-    <div id="history-bar"></div>
+    <div id="history-bar">
+        <!-- Dinámico -->
+    </div>
 
     <!-- ZONA CRASH (CANVAS) -->
     <div id="game-area">
         <canvas id="crash-canvas"></canvas>
         
         <div id="status-display">PRÓXIMA RONDA</div>
-        <div id="multiplier-display" class="mult-active">1.00x</div>
+        <div id="multiplier-display" class="mult-active">0.00x</div>
         
         <div id="cashout-msg">
             ¡COBRADO!<br><span id="cashout-amount" class="text-3xl text-white drop-shadow-md">+0 bits</span>
@@ -196,6 +199,7 @@
 
     <!-- CONTROLES -->
     <div id="controls-area">
+        
         <div class="flex gap-2 mb-3">
             <button class="quick-bet" onclick="addBet(100)">+100</button>
             <button class="quick-bet" onclick="addBet(250)">+250</button>
@@ -214,22 +218,27 @@
         </button>
     </div>
 
+    <!-- ==========================================
+         LÓGICA JAVASCRIPT
+         ========================================== -->
     <script>
-        /* --- CONFIGURACIÓN MATEMÁTICA (MOTOR DE CRASH PURO) --- */
-        // La ventaja de la casa es exactamente el 3% a largo plazo. 
-        // Genera la distribución de cola larga natural que existe en todos los Crash originales.
+        /* --- CONFIGURACIÓN MATEMÁTICA ESTRICTA --- */
         const CONFIG = {
-            HOUSE_EDGE: 0.03, // 3% House Edge -> 97% RTP
-            MAX_MULTIPLIER: 10000.00, // Límite de seguridad
+            HOUSE_EDGE: 0.03, // Ventaja de la casa: 3% = RTP Teórico 97%
+            MAX_MULTIPLIER: 10000.00,
             COUNTDOWN_TIME: 5000, 
-            ANIMATION_ACCELERATION: 0.00006 // Define cómo acelera la curva
+            
+            // Constantes de Aceleración de tiempo y curva para un inicio muuuy lento
+            SPEED_MULTIPLIER: 0.00003, // Hace que tarde varios segundos en llegar de 0.00 a 1.00
         };
 
+        /* --- SUPABASE --- */
         const { createClient } = supabase;
         const supabaseUrl = 'https://qutkwzjchchhbqfhtaxi.supabase.co';
         const supabaseKey = 'sb_publishable_fv4VSDx-LJrkorzY0bOKaA_0poFJcU1';
         const supabaseClient = createClient(supabaseUrl, supabaseKey);
 
+        /* --- ESTADO DEL JUEGO --- */
         let currentUser = null;
         let gameState = 'IDLE'; // IDLE, COUNTDOWN, FLYING, CRASHED
         
@@ -240,9 +249,9 @@
         let isProcessingDb = false; 
 
         // VARIABLES FÍSICAS DE VUELO
-        let currentVisualMultiplier = 0.00; // Novedad: Empieza visualmente en 0.00x y sube a 1.00x en el despegue
-        let crashPoint = 1.00; 
-        let currentElapsedMs = 0; // Control de tiempo por frame
+        let currentVisualMultiplier = 0.00; // OBLIGATORIO: Inicio real de la ronda
+        let crashPoint = 0.00; 
+        let currentElapsedMs = 0; 
         let flightStartTime = 0;
         let lastFrameTime = 0;
         
@@ -289,7 +298,7 @@
             osc.start(); osc.stop(audioCtx.currentTime + 0.5);
         }
 
-        /* --- MOTOR GRÁFICO (CANVAS) --- */
+        /* --- MOTOR GRÁFICO CANVAS 2D --- */
         const canvas = document.getElementById('crash-canvas');
         const ctx = canvas.getContext('2d');
         let canvasW = 0, canvasH = 0;
@@ -310,12 +319,11 @@
 
             if (gameState === 'IDLE' || gameState === 'COUNTDOWN') {
                 drawGrid(1, 1);
-                // Dibujar la nave estática en el suelo (0.00x)
                 drawShip(0, canvasH);
                 return;
             }
 
-            // Lógica de dibujo con la curva que empieza en 0
+            // Escala del gráfico dinámica
             const maxTime = Math.max(5000, currentElapsedMs); 
             const maxY = Math.max(2.0, currentVisualMultiplier * 1.2); 
 
@@ -329,11 +337,12 @@
             
             for (let i = 0; i <= steps; i++) {
                 const t = (i / steps) * currentElapsedMs;
-                // Calculamos el valor Y histórico en cada punto T de la curva
-                const m = Math.max(0.00, Math.pow(Math.E, CONFIG.ANIMATION_ACCELERATION * t * t / 1000) - 1);
+                // La misma curva matemática exacta del GameLoop
+                let m = (Math.pow(Math.E, CONFIG.SPEED_MULTIPLIER * t * (t / 1000))) - 1;
+                // Previene glitcheos visuales
+                if (m < 0) m = 0; 
                 
                 const x = (t / maxTime) * canvasW;
-                // Si m=0 (t=0), y = canvasH. Si m=maxY, y = 0.
                 const y = canvasH - (m / maxY) * canvasH;
                 
                 ctx.lineTo(x, y);
@@ -381,12 +390,10 @@
             ctx.save();
             ctx.translate(x, y);
             ctx.rotate(-Math.PI / 6); 
-            
             ctx.fillStyle = Math.random() > 0.5 ? '#f97316' : '#fef08a';
             ctx.beginPath();
             ctx.moveTo(-10, -5); ctx.lineTo(-25, 0); ctx.lineTo(-10, 5);
             ctx.fill();
-            
             ctx.fillStyle = '#ffffff';
             ctx.beginPath();
             ctx.moveTo(15, 0); ctx.lineTo(-10, 8); ctx.lineTo(-10, -8);
@@ -501,11 +508,15 @@
             } 
             else if (gameState === 'FLYING') {
                 input.disabled = true;
+                
+                // NOVEDAD: El botón de COBRAR se activa desde el inicio, sin importar si es < 1.00x
                 if (hasBet && !hasCashedOut) {
                     btn.disabled = false;
                     btn.className = "action-btn btn-cashout animate-pulse";
-                    const currentWin = (activeBetAmount * Math.max(1.00, currentVisualMultiplier)).toFixed(0);
-                    btn.innerHTML = `COBRAR <br><span class="text-sm text-yellow-900">${currentWin} bits</span>`;
+                    
+                    // Cálculo a tiempo real preciso y sin redondeos locos
+                    const currentWin = Math.floor(activeBetAmount * currentVisualMultiplier);
+                    btn.innerHTML = `COBRAR <br><span class="text-sm text-yellow-900">${currentWin.toLocaleString()} bits</span>`;
                 } else {
                     btn.disabled = true;
                     btn.className = "action-btn";
@@ -519,23 +530,19 @@
             }
         }
 
-        /* --- LÓGICA MATEMÁTICA: MOTOR CRASH PRO --- */
-        /**
-         * GENERADOR DE CRASH PURO (ESTÁNDAR DE CASINO)
-         * Fórmula: P(X > x) = (1 - HouseEdge) / x
-         * El generador no mira al jugador. Suelta el resultado ciegamente.
-         * RTP Teórico = 97% | House Edge = 3%
-         */
+        /* --- LÓGICA CORE: MATEMÁTICA Y ESTADO --- */
+        
+        // MATEMÁTICA DE CASINO PURA: Fórmula de Distribución Inversa para House Edge del 3%
         function generateCrashPoint() {
             const rand = Math.random();
-            // El 3% de las veces la banca gana instantáneamente ("Insta-Crash")
-            if (rand < CONFIG.HOUSE_EDGE) return 1.00;
+            // Hay un 3% natural de que la partida crashee instántaneamente o por debajo de 1.00x
+            if (rand < CONFIG.HOUSE_EDGE) {
+                // Genera un crashPoint entre 0.00 y 0.99 para ser justos en ese 3%
+                return Math.floor(Math.random() * 100) / 100;
+            }
             
-            // Fórmula probabilística de cola larga
             const m = (1 - CONFIG.HOUSE_EDGE) / (1 - rand);
-            
-            // Limitador técnico de seguridad
-            return Math.min(CONFIG.MAX_MULTIPLIER, Math.max(1.00, Math.floor(m * 100) / 100));
+            return Math.min(CONFIG.MAX_MULTIPLIER, Math.floor(m * 100) / 100);
         }
 
         async function handleAction() {
@@ -547,7 +554,6 @@
                     if (currentBet > currentUser.saldo) return showToast("Saldo insuficiente");
                     
                     isProcessingDb = true;
-                    // Deducción atómica
                     currentUser.saldo -= currentBet;
                     const { error } = await supabaseClient.from('usuarios').update({ saldo: currentUser.saldo }).eq('id', currentUser.id);
                     isProcessingDb = false;
@@ -577,12 +583,13 @@
                 }
             }
             else if (gameState === 'FLYING') {
-                if (hasBet && !hasCashedOut && currentVisualMultiplier >= 1.00) {
-                    // CASH OUT
-                    isProcessingDb = true;
-                    hasCashedOut = true;
+                // CONDICIÓN ESTRICTA DE CASH OUT SIMULTÁNEO (Si ya crasheó, no entra)
+                if (hasBet && !hasCashedOut && currentVisualMultiplier < crashPoint) {
                     
-                    // Aseguramos el multiplicador exacto del momento del click
+                    isProcessingDb = true;
+                    hasCashedOut = true; // Bloquea un segundo intento
+                    
+                    // Aseguramos el multiplicador exacto del momento del clic (puede ser < 1)
                     const lockedMultiplier = currentVisualMultiplier; 
                     const winAmount = Math.floor(activeBetAmount * lockedMultiplier);
                     
@@ -595,27 +602,23 @@
                     playCashout();
                     if(navigator.vibrate) navigator.vibrate([50, 50, 100]);
 
-                    // UI Feedback
                     const msg = document.getElementById('cashout-msg');
-                    document.getElementById('cashout-amount').innerText = `+${winAmount} bits`;
+                    document.getElementById('cashout-amount').innerText = `+${winAmount.toLocaleString()} bits`;
                     msg.classList.add('show');
                 }
             }
         }
 
-        /* --- BUCLE PRINCIPAL (GAME LOOP) --- */
+        /* --- BUCLE PRINCIPAL DEL JUEGO (GAME LOOP) --- */
         function initRound() {
             gameState = 'COUNTDOWN';
             hasBet = false;
             hasCashedOut = false;
             activeBetAmount = 0;
-            currentVisualMultiplier = 0.00; // Empieza desde 0 visualmente
-            currentElapsedMs = 0;
+            currentVisualMultiplier = 0.00; // OBLIGATORIO: INICIA EN CERO
             
-            const display = document.getElementById('multiplier-display');
-            display.className = 'mult-active';
-            display.innerText = '0.00x'; // Reseteo visual
-            
+            document.getElementById('multiplier-display').className = 'mult-active';
+            document.getElementById('multiplier-display').innerText = '0.00x';
             document.getElementById('status-display').innerText = 'PRÓXIMA RONDA';
             document.getElementById('cashout-msg').classList.remove('show');
             
@@ -626,7 +629,7 @@
             const countdownInterval = setInterval(() => {
                 timeLeft -= 1000;
                 if (timeLeft > 0) {
-                    display.innerText = `${(timeLeft/1000).toFixed(1)}s`;
+                    document.getElementById('multiplier-display').innerText = `${timeLeft/1000}s`;
                     playTick();
                 } else {
                     clearInterval(countdownInterval);
@@ -639,7 +642,7 @@
 
         function startFlight() {
             gameState = 'FLYING';
-            // EL RESULTADO SE GENERA ANTES DE ANIMAR
+            // SEPARACIÓN ESTRICTA: La lógica determina la muerte del cohete ANTES de empezar.
             crashPoint = generateCrashPoint(); 
             
             flightStartTime = Date.now();
@@ -647,25 +650,23 @@
             currentElapsedMs = 0;
             
             document.getElementById('status-display').innerText = '';
+            
             updateActionButton();
         }
 
         function triggerCrash() {
             gameState = 'CRASHED';
-            // Forzar exactitud al final
-            currentVisualMultiplier = crashPoint; 
+            currentVisualMultiplier = crashPoint; // Forzar exactitud visual
             
-            const display = document.getElementById('multiplier-display');
-            display.innerText = `${currentVisualMultiplier.toFixed(2)}x`;
-            display.className = 'mult-crashed';
-            
+            document.getElementById('multiplier-display').innerText = `${currentVisualMultiplier.toFixed(2)}x`;
+            document.getElementById('multiplier-display').className = 'mult-crashed';
             document.getElementById('status-display').innerText = 'CRASHED';
             document.getElementById('status-display').style.color = 'var(--brand-red)';
             
             updateActionButton();
             playCrash();
             if(navigator.vibrate) navigator.vibrate(300);
-            
+
             historyArr.push(crashPoint);
             if(historyArr.length > 10) historyArr.shift();
             renderHistory();
@@ -683,15 +684,19 @@
                 lastFrameTime = now;
                 currentElapsedMs += delta;
                 
-                // M(t) = e^(k*t^2) - 1. Esta fórmula arranca en 0 y sube lentamente hasta 1.00x, para luego despegar fuerte
-                currentVisualMultiplier = Math.pow(Math.E, CONFIG.ANIMATION_ACCELERATION * currentElapsedMs * currentElapsedMs / 1000) - 1;
+                // NUEVA FÓRMULA DE TIEMPO (CRECIMIENTO LENTO DESDE 0.00x)
+                // e^(k * t * (t/1000)) - 1 = Empieza suave y acelera a lo bestia en multiplicadores altos.
+                let calculatedMultiplier = Math.pow(Math.E, CONFIG.SPEED_MULTIPLIER * currentElapsedMs * (currentElapsedMs / 1000)) - 1;
+                
+                // Evitamos visuales negativos.
+                if (calculatedMultiplier < 0) calculatedMultiplier = 0;
+                
+                currentVisualMultiplier = calculatedMultiplier;
 
                 if (currentVisualMultiplier >= crashPoint) {
                     triggerCrash();
                 } else {
-                    document.getElementById('multiplier-display').innerText = `${Math.max(1.00, currentVisualMultiplier).toFixed(2)}x`;
-                    
-                    // Actualizar el premio del botón en vivo solo si ya ha cruzado la línea de 1.00x
+                    document.getElementById('multiplier-display').innerText = `${currentVisualMultiplier.toFixed(2)}x`;
                     if (hasBet && !hasCashedOut) updateActionButton(); 
                 }
             }
