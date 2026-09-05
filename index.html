@@ -7,7 +7,6 @@
     
     <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🔥</text></svg>">
     
-    <!-- FUENTE OFICIAL SPIN VÍA: Montserrat (Premium, legible, números perfectos para Gaming) -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;800;900&display=swap" rel="stylesheet">
@@ -23,7 +22,6 @@
             --safe-bottom: env(safe-area-inset-bottom, 12px);
         }
 
-        /* TIPOGRAFÍA OFICIAL APLICADA GLOBALMENTE */
         body, html {
             margin: 0; padding: 0; width: 100vw; height: 100dvh;
             user-select: none; -webkit-user-select: none; -webkit-touch-callout: none;
@@ -44,7 +42,6 @@
         .view-section.active { display: flex; }
         @keyframes fade-in { 0% { opacity: 0; } 100% { opacity: 1; } }
 
-        /* --- VISTA 1: HUB SPIN VÍA --- */
         #view-hub { overflow-y: auto; padding-bottom: var(--safe-bottom); }
         .hub-card {
             background: linear-gradient(145deg, #18181b 0%, #09090b 100%);
@@ -61,10 +58,9 @@
         .brand-via {
             color: #FFD700;
             text-shadow: 0 0 10px rgba(255, 215, 0, 0.4), 0 0 20px rgba(255, 215, 0, 0.2);
-            text-transform: none; /* Conserva la í minúscula como pediste */
+            text-transform: none; 
         }
 
-        /* --- MONEDA 3D SVG INLINE (Tarjeta Cara o Cruz) --- */
         .coin-3d {
             width: 80px; height: 80px;
             border-radius: 50%;
@@ -87,7 +83,6 @@
             transform: translateZ(10px);
         }
 
-        /* --- VISTA RULETA (CSS INTOCABLE) --- */
         .jackpot-row { flex: 0 0 auto; background: linear-gradient(180deg, #18181b 0%, #09090b 100%); border-bottom: 1px solid #27272a; height: 32px; }
         .j-grand { text-shadow: 0 0 10px #facc15; animation: slow-pulse 2s infinite; }
         @keyframes slow-pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.7; } }
@@ -224,7 +219,6 @@
     <div id="view-hub" class="view-section active">
         <div class="flex-1 flex flex-col w-full max-w-md mx-auto p-4 pt-8">
             
-            <!-- BRANDING SPIN VÍA -->
             <div class="text-center mb-8">
                 <h1 class="text-4xl font-black tracking-widest text-white uppercase">
                     Spin <span class="brand-via">Vía</span>
@@ -232,7 +226,6 @@
                 <p class="text-zinc-500 text-[10px] font-bold tracking-[0.4em] uppercase mt-2">Premium Casino</p>
             </div>
 
-            <!-- TARJETA: PERFIL Y SALDO -->
             <div class="hub-card rounded-2xl p-5 mb-6 relative overflow-hidden">
                 <div class="absolute -top-10 -right-10 w-32 h-32 bg-red-600/10 blur-3xl rounded-full pointer-events-none"></div>
                 
@@ -252,7 +245,6 @@
                 </div>
             </div>
 
-            <!-- TARJETA: PROGRESO -->
             <div class="hub-card rounded-2xl p-5 mb-8">
                 <div class="flex justify-between items-end mb-3">
                     <span class="text-[11px] font-black uppercase tracking-widest text-zinc-300">Rollover</span>
@@ -269,12 +261,10 @@
                 </div>
             </div>
 
-            <!-- SELECTOR DE JUEGOS -->
             <div class="mb-4">
                 <h3 class="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-500 mb-3 px-1">Juegos Disponibles</h3>
                 
                 <div class="grid grid-cols-1 gap-4">
-                    <!-- TARJETA: MEGA FIRE ROULETTE -->
                     <div onclick="goToRoulette()" class="hub-game-card rounded-2xl p-1 relative group cursor-pointer">
                         <div class="absolute inset-0 bg-red-600/10 opacity-0 group-hover:opacity-100 transition-opacity rounded-2xl"></div>
                         <div class="border border-zinc-800/50 bg-black/40 rounded-xl p-5 flex flex-col items-center text-center relative z-10">
@@ -287,10 +277,9 @@
                         </div>
                     </div>
 
-                    <!-- TARJETA: CARA O CRUZ (Redirige a archivo independiente preservando el código) -->
+                    <!-- AQUÍ ESTÁ EL FIX ESPECÍFICO DE URL ENCODING -->
                     <div onclick="goToCaraOCruz()" class="hub-card rounded-2xl p-1 relative group cursor-pointer border border-zinc-700/50 hover:border-yellow-500/50 transition-colors">
                         <div class="border border-zinc-800/50 bg-black/40 rounded-xl p-5 flex flex-col items-center text-center relative z-10">
-                            <!-- Moneda 3D generada por CSS -->
                             <div class="coin-3d mb-4"></div>
                             <h4 class="text-xl font-black text-white uppercase tracking-widest mb-1">Cara o Cruz</h4>
                             <p class="text-[10px] text-zinc-400 font-bold uppercase tracking-[0.3em] mb-4">Coin Flip</p>
@@ -448,7 +437,6 @@
             setTimeout(() => toast.style.opacity = '0', 2000);
         }
 
-        // NAVEGACIÓN Y EXTRACCIÓN DE CÓDIGO URL
         function switchView(viewId) {
             document.querySelectorAll('.view-section').forEach(el => el.classList.remove('active'));
             document.getElementById(viewId).classList.add('active');
@@ -464,13 +452,15 @@
             }
         }
 
+        /* 
+           --- FUNCIÓN REPARADA EXACTAMENTE AQUÍ --- 
+           Codifica los espacios (%20) para evitar que Vercel y los navegadores móviles rompan la redirección a un archivo que contiene espacios literales.
+        */
         function goToCaraOCruz() {
-            // Lee el código actual de la URL
             const urlParams = new URLSearchParams(window.location.search);
             const codigo = urlParams.get('codigo');
             if(codigo) {
-                // Redirige al nuevo archivo HTML inyectando la misma clave de autenticación
-                window.location.href = `cara o cruz.html?codigo=${codigo}`;
+                window.location.href = 'cara%20o%20cruz.html?codigo=' + codigo;
             }
         }
 
