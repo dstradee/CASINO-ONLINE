@@ -7,15 +7,12 @@
     
     <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🚀</text></svg>">
     
-    <!-- Tipografía Spin Vía -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;800;900&display=swap" rel="stylesheet">
     
-    <!-- CDNs -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
 
     <style>
         :root {
@@ -39,7 +36,6 @@
             text-shadow: 0 0 10px rgba(255, 215, 0, 0.4), 0 0 20px rgba(255, 215, 0, 0.2);
         }
 
-        /* --- TOAST --- */
         #toast-msg {
             position: fixed; top: 15%; left: 50%; transform: translateX(-50%);
             background: rgba(220, 38, 38, 0.95); color: white; padding: 8px 16px;
@@ -50,13 +46,12 @@
 
         header { flex: 0 0 auto; height: 55px; }
 
-        /* --- HISTORIAL --- */
         #history-bar {
             flex: 0 0 auto; height: 35px; background: #09090b; border-bottom: 1px solid #27272a;
             display: flex; align-items: center; padding: 0 12px; gap: 8px; overflow-x: auto;
-            white-space: nowrap; scrollbar-width: none; /* Firefox */
+            white-space: nowrap; scrollbar-width: none;
         }
-        #history-bar::-webkit-scrollbar { display: none; /* Chrome/Safari */ }
+        #history-bar::-webkit-scrollbar { display: none; }
         
         .history-item {
             font-size: 0.75rem; font-weight: 800; padding: 2px 8px; border-radius: 12px;
@@ -66,7 +61,6 @@
         .hist-med { color: #4ade80; border-color: #166534; background: rgba(22, 101, 52, 0.2); }
         .hist-high { color: #facc15; border-color: #a16207; background: rgba(161, 98, 7, 0.2); text-shadow: 0 0 5px rgba(250,204,21,0.5); }
 
-        /* --- ZONA CRASH (CANVAS) --- */
         #game-area {
             flex: 1 1 0; position: relative; display: flex; flex-direction: column;
             background: radial-gradient(circle at center, #18181b 0%, #000 100%);
@@ -77,7 +71,6 @@
             position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 10;
         }
 
-        /* OVERLAYS DEL JUEGO */
         #multiplier-display {
             position: absolute; top: 40%; left: 50%; transform: translate(-50%, -50%);
             font-size: 6rem; font-weight: 900; z-index: 20; text-align: center;
@@ -101,7 +94,6 @@
         }
         #cashout-msg.show { opacity: 1; transform: translate(-50%, -50%) scale(1); }
 
-        /* --- CONTROLES DE APUESTA --- */
         #controls-area {
             flex: 0 0 auto; background: #09090b; border-top: 1px solid #27272a;
             padding: 12px 16px calc(var(--safe-bottom) + 12px) 16px;
@@ -126,7 +118,6 @@
         }
         .quick-bet:active { background: #27272a; color: white; transform: scale(0.95); }
 
-        /* Botón de Acción Principal Dinámico */
         .action-btn {
             width: 100%; border-radius: 8px; padding: 14px 0; font-size: 1.25rem; font-weight: 900;
             color: white; text-transform: uppercase; letter-spacing: 0.1em;
@@ -135,12 +126,10 @@
         .action-btn:active:not(:disabled) { transform: translateY(4px); box-shadow: 0 0 0 rgba(0,0,0,0.5); }
         .action-btn:disabled { background: #27272a !important; border-color: #3f3f46 !important; color: #71717a !important; box-shadow: none !important; transform: none !important; }
         
-        /* Estados del botón */
         .btn-bet { background: linear-gradient(to bottom, #16a34a, #15803d); border: 1px solid #4ade80; box-shadow: 0 4px 0 #14532d; }
         .btn-cancel { background: linear-gradient(to bottom, #dc2626, #b91c1c); border: 1px solid #f87171; box-shadow: 0 4px 0 #7f1d1d; }
         .btn-cashout { background: linear-gradient(to bottom, #FFD700, #b45309); border: 1px solid #fef08a; color: #000; box-shadow: 0 4px 0 #78350f; text-shadow: 0 1px 2px rgba(255,255,255,0.5); }
 
-        /* Icono de Sonido */
         #sound-toggle {
             background: none; border: none; color: #a1a1aa; font-size: 1.2rem; padding: 4px;
         }
@@ -159,7 +148,6 @@
 
     <div id="toast-msg">Mensaje</div>
 
-    <!-- Carga Sistema -->
     <div id="sys-loading" class="absolute inset-0 z-[200] bg-black flex flex-col items-center justify-center">
         <div class="text-5xl mb-4 animate-bounce">🚀</div>
         <p class="text-yellow-500 font-bold uppercase tracking-widest text-sm animate-pulse">Cargando Motor...</p>
@@ -192,9 +180,7 @@
     </header>
 
     <!-- HISTORIAL -->
-    <div id="history-bar">
-        <!-- Generado dinámicamente -->
-    </div>
+    <div id="history-bar"></div>
 
     <!-- ZONA CRASH (CANVAS) -->
     <div id="game-area">
@@ -210,7 +196,6 @@
 
     <!-- CONTROLES -->
     <div id="controls-area">
-        
         <div class="flex gap-2 mb-3">
             <button class="quick-bet" onclick="addBet(100)">+100</button>
             <button class="quick-bet" onclick="addBet(250)">+250</button>
@@ -229,41 +214,41 @@
         </button>
     </div>
 
-    <!-- ==========================================
-         LÓGICA JAVASCRIPT
-         ========================================== -->
     <script>
-        /* --- CONFIGURACIÓN DEL JUEGO (HOUSE EDGE) --- */
-        // La ventaja matemática del juego. 0.04 = 4% de House Edge a largo plazo.
+        /* --- CONFIGURACIÓN MATEMÁTICA (MOTOR DE CRASH PURO) --- */
+        // La ventaja de la casa es exactamente el 3% a largo plazo. 
+        // Genera la distribución de cola larga natural que existe en todos los Crash originales.
         const CONFIG = {
-            HOUSE_EDGE: 0.04, 
-            GROWTH_SPEED: 0.06, // Controla la aceleración exponencial del multiplicador
-            COUNTDOWN_TIME: 5000, // 5 segundos entre rondas
+            HOUSE_EDGE: 0.03, // 3% House Edge -> 97% RTP
+            MAX_MULTIPLIER: 10000.00, // Límite de seguridad
+            COUNTDOWN_TIME: 5000, 
+            ANIMATION_ACCELERATION: 0.00006 // Define cómo acelera la curva
         };
 
-        /* --- SUPABASE --- */
         const { createClient } = supabase;
         const supabaseUrl = 'https://qutkwzjchchhbqfhtaxi.supabase.co';
         const supabaseKey = 'sb_publishable_fv4VSDx-LJrkorzY0bOKaA_0poFJcU1';
         const supabaseClient = createClient(supabaseUrl, supabaseKey);
 
-        /* --- ESTADO DEL JUEGO --- */
         let currentUser = null;
         let gameState = 'IDLE'; // IDLE, COUNTDOWN, FLYING, CRASHED
         
         let currentBet = 100;
-        let activeBetAmount = 0; // Lo que se apostó en la ronda actual
+        let activeBetAmount = 0; 
         let hasBet = false;
         let hasCashedOut = false;
-        let isProcessingDb = false; // Evita dobles clics
+        let isProcessingDb = false; 
 
-        let currentMultiplier = 1.00;
-        let crashPoint = 1.00;
-        let startTime = 0;
+        // VARIABLES FÍSICAS DE VUELO
+        let currentVisualMultiplier = 0.00; // Novedad: Empieza visualmente en 0.00x y sube a 1.00x en el despegue
+        let crashPoint = 1.00; 
+        let currentElapsedMs = 0; // Control de tiempo por frame
+        let flightStartTime = 0;
+        let lastFrameTime = 0;
         
-        let historyArr = []; // Guarda los multiplicadores anteriores
+        let historyArr = []; 
 
-        /* --- SISTEMA DE AUDIO (WEB AUDIO API - SIN ARCHIVOS EXTERNOS) --- */
+        /* --- SISTEMA DE AUDIO NATIVO --- */
         let audioCtx = null;
         let soundEnabled = false;
 
@@ -304,7 +289,7 @@
             osc.start(); osc.stop(audioCtx.currentTime + 0.5);
         }
 
-        /* --- MOTOR GRÁFICO CANVAS 2D --- */
+        /* --- MOTOR GRÁFICO (CANVAS) --- */
         const canvas = document.getElementById('crash-canvas');
         const ctx = canvas.getContext('2d');
         let canvasW = 0, canvasH = 0;
@@ -313,7 +298,6 @@
         function resizeCanvas() {
             canvasW = canvas.parentElement.clientWidth;
             canvasH = canvas.parentElement.clientHeight;
-            // Soporte alta resolución (Retina)
             const dpr = window.devicePixelRatio || 1;
             canvas.width = canvasW * dpr;
             canvas.height = canvasH * dpr;
@@ -326,43 +310,40 @@
 
             if (gameState === 'IDLE' || gameState === 'COUNTDOWN') {
                 drawGrid(1, 1);
+                // Dibujar la nave estática en el suelo (0.00x)
+                drawShip(0, canvasH);
                 return;
             }
 
-            // Escala dinámica del gráfico basada en el multiplicador actual
-            const maxTime = Math.max(5000, Date.now() - startTime); // Mínimo visual de 5s
-            const maxY = Math.max(2.0, currentMultiplier * 1.2); // El tope Y va subiendo
+            // Lógica de dibujo con la curva que empieza en 0
+            const maxTime = Math.max(5000, currentElapsedMs); 
+            const maxY = Math.max(2.0, currentVisualMultiplier * 1.2); 
 
             drawGrid(maxTime, maxY);
 
-            // Dibujar la curva exponencial
             ctx.beginPath();
             ctx.moveTo(0, canvasH);
             
             let curX = 0, curY = canvasH;
-            
-            // Reconstruimos la curva desde t=0 hasta el tiempo actual
             const steps = 50;
-            const timeElapsed = Date.now() - startTime;
             
             for (let i = 0; i <= steps; i++) {
-                const t = (i / steps) * timeElapsed;
-                // Misma fórmula matemática que rige el juego
-                const m = Math.max(1.00, Math.pow(Math.E, CONFIG.GROWTH_SPEED * (t / 1000)));
+                const t = (i / steps) * currentElapsedMs;
+                // Calculamos el valor Y histórico en cada punto T de la curva
+                const m = Math.max(0.00, Math.pow(Math.E, CONFIG.ANIMATION_ACCELERATION * t * t / 1000) - 1);
                 
                 const x = (t / maxTime) * canvasW;
-                // Invertimos Y porque canvas 0,0 es arriba-izquierda
-                const y = canvasH - ((m - 1) / (maxY - 1)) * canvasH;
+                // Si m=0 (t=0), y = canvasH. Si m=maxY, y = 0.
+                const y = canvasH - (m / maxY) * canvasH;
                 
                 ctx.lineTo(x, y);
                 if (i === steps) { curX = x; curY = y; }
             }
 
             ctx.lineWidth = 4;
-            ctx.strokeStyle = (gameState === 'CRASHED') ? varBrandRed : varBrandGold;
+            ctx.strokeStyle = (gameState === 'CRASHED') ? '#dc2626' : '#FFD700';
             ctx.stroke();
 
-            // Dibujar el relleno de área con gradiente
             ctx.lineTo(curX, canvasH);
             ctx.lineTo(0, canvasH);
             const gradient = ctx.createLinearGradient(0, 0, 0, canvasH);
@@ -376,24 +357,18 @@
             ctx.fillStyle = gradient;
             ctx.fill();
 
-            // Dibujar Elemento Animado (El "Cohete" o Nave)
-            if (gameState === 'FLYING') {
-                drawShip(curX, curY);
-            } else if (gameState === 'CRASHED') {
-                drawExplosion(curX, curY);
-            }
+            if (gameState === 'FLYING') drawShip(curX, curY);
+            else if (gameState === 'CRASHED') drawExplosion(curX, curY);
         }
 
         function drawGrid(maxTime, maxY) {
             ctx.strokeStyle = '#27272a';
             ctx.lineWidth = 1;
             ctx.beginPath();
-            // Lineas horizontales (Multiplicadores)
             for(let i = 1; i <= 5; i++) {
                 const y = canvasH - (i / 5) * canvasH;
                 ctx.moveTo(0, y); ctx.lineTo(canvasW, y);
             }
-            // Lineas verticales que se mueven simulando velocidad
             const timeOffset = (Date.now() % 1000) / 1000;
             for(let i = 0; i <= 5; i++) {
                 const x = ((i - timeOffset) / 5) * canvasW;
@@ -402,22 +377,16 @@
             ctx.stroke();
         }
 
-        const varBrandGold = '#FFD700';
-        const varBrandRed = '#dc2626';
-
         function drawShip(x, y) {
             ctx.save();
             ctx.translate(x, y);
-            // Angulo de inclinación dinámico
             ctx.rotate(-Math.PI / 6); 
             
-            // Fuego del motor
             ctx.fillStyle = Math.random() > 0.5 ? '#f97316' : '#fef08a';
             ctx.beginPath();
             ctx.moveTo(-10, -5); ctx.lineTo(-25, 0); ctx.lineTo(-10, 5);
             ctx.fill();
             
-            // Cuerpo de la nave (Estilo futurista minimalista)
             ctx.fillStyle = '#ffffff';
             ctx.beginPath();
             ctx.moveTo(15, 0); ctx.lineTo(-10, 8); ctx.lineTo(-10, -8);
@@ -428,18 +397,14 @@
         function drawExplosion(x, y) {
             ctx.save();
             ctx.translate(x, y);
-            ctx.fillStyle = varBrandRed;
-            ctx.beginPath();
-            ctx.arc(0, 0, 15 + Math.random()*10, 0, Math.PI*2);
-            ctx.fill();
+            ctx.fillStyle = '#dc2626';
+            ctx.beginPath(); ctx.arc(0, 0, 15 + Math.random()*10, 0, Math.PI*2); ctx.fill();
             ctx.fillStyle = '#f97316';
-            ctx.beginPath();
-            ctx.arc(0, 0, 8 + Math.random()*5, 0, Math.PI*2);
-            ctx.fill();
+            ctx.beginPath(); ctx.arc(0, 0, 8 + Math.random()*5, 0, Math.PI*2); ctx.fill();
             ctx.restore();
         }
 
-        /* --- INICIALIZACIÓN Y NAVEGACIÓN --- */
+        /* --- INICIALIZACIÓN --- */
         document.addEventListener('DOMContentLoaded', async () => {
             resizeCanvas();
 
@@ -459,7 +424,7 @@
                 currentUser = data;
                 document.getElementById('sys-loading').classList.add('hidden');
                 updateBalanceUI();
-                initRound(); // Empieza el loop del juego
+                initRound(); 
             }
         });
 
@@ -539,7 +504,7 @@
                 if (hasBet && !hasCashedOut) {
                     btn.disabled = false;
                     btn.className = "action-btn btn-cashout animate-pulse";
-                    const currentWin = (activeBetAmount * currentMultiplier).toFixed(0);
+                    const currentWin = (activeBetAmount * Math.max(1.00, currentVisualMultiplier)).toFixed(0);
                     btn.innerHTML = `COBRAR <br><span class="text-sm text-yellow-900">${currentWin} bits</span>`;
                 } else {
                     btn.disabled = true;
@@ -554,18 +519,23 @@
             }
         }
 
-        /* --- LÓGICA CORE: MATEMÁTICA Y ESTADO --- */
-        
-        // Genera el punto de crash predeterminado asegurando la ventaja de la casa.
-        // Fórmula matemática estandarizada para Crash Games.
+        /* --- LÓGICA MATEMÁTICA: MOTOR CRASH PRO --- */
+        /**
+         * GENERADOR DE CRASH PURO (ESTÁNDAR DE CASINO)
+         * Fórmula: P(X > x) = (1 - HouseEdge) / x
+         * El generador no mira al jugador. Suelta el resultado ciegamente.
+         * RTP Teórico = 97% | House Edge = 3%
+         */
         function generateCrashPoint() {
             const rand = Math.random();
-            // 4% de las veces crashea instantáneamente (El House Edge absoluto)
+            // El 3% de las veces la banca gana instantáneamente ("Insta-Crash")
             if (rand < CONFIG.HOUSE_EDGE) return 1.00;
             
-            // El resto se distribuye inversamente proporcional a la probabilidad
+            // Fórmula probabilística de cola larga
             const m = (1 - CONFIG.HOUSE_EDGE) / (1 - rand);
-            return Math.max(1.00, Math.floor(m * 100) / 100);
+            
+            // Limitador técnico de seguridad
+            return Math.min(CONFIG.MAX_MULTIPLIER, Math.max(1.00, Math.floor(m * 100) / 100));
         }
 
         async function handleAction() {
@@ -577,13 +547,13 @@
                     if (currentBet > currentUser.saldo) return showToast("Saldo insuficiente");
                     
                     isProcessingDb = true;
-                    // Descontar inmediatamente para proteger concurrencia
+                    // Deducción atómica
                     currentUser.saldo -= currentBet;
                     const { error } = await supabaseClient.from('usuarios').update({ saldo: currentUser.saldo }).eq('id', currentUser.id);
                     isProcessingDb = false;
 
                     if (error) {
-                        currentUser.saldo += currentBet; // Rollback visual
+                        currentUser.saldo += currentBet; // Rollback
                         return showToast("Error de conexión");
                     }
                     
@@ -594,7 +564,7 @@
                     if(navigator.vibrate) navigator.vibrate(10);
                 } 
                 else {
-                    // Cancelar Apuesta (Antes de volar)
+                    // Cancelar Apuesta
                     isProcessingDb = true;
                     currentUser.saldo += activeBetAmount;
                     await supabaseClient.from('usuarios').update({ saldo: currentUser.saldo }).eq('id', currentUser.id);
@@ -607,13 +577,13 @@
                 }
             }
             else if (gameState === 'FLYING') {
-                if (hasBet && !hasCashedOut) {
+                if (hasBet && !hasCashedOut && currentVisualMultiplier >= 1.00) {
                     // CASH OUT
                     isProcessingDb = true;
                     hasCashedOut = true;
                     
-                    // Aseguramos el multiplicador exacto del momento del clic
-                    const lockedMultiplier = currentMultiplier; 
+                    // Aseguramos el multiplicador exacto del momento del click
+                    const lockedMultiplier = currentVisualMultiplier; 
                     const winAmount = Math.floor(activeBetAmount * lockedMultiplier);
                     
                     currentUser.saldo += winAmount;
@@ -633,17 +603,19 @@
             }
         }
 
-        /* --- BUCLE PRINCIPAL DEL JUEGO (GAME LOOP) --- */
-
+        /* --- BUCLE PRINCIPAL (GAME LOOP) --- */
         function initRound() {
             gameState = 'COUNTDOWN';
             hasBet = false;
             hasCashedOut = false;
             activeBetAmount = 0;
-            currentMultiplier = 1.00;
+            currentVisualMultiplier = 0.00; // Empieza desde 0 visualmente
+            currentElapsedMs = 0;
             
-            document.getElementById('multiplier-display').className = 'mult-active';
-            document.getElementById('multiplier-display').innerText = '1.00x';
+            const display = document.getElementById('multiplier-display');
+            display.className = 'mult-active';
+            display.innerText = '0.00x'; // Reseteo visual
+            
             document.getElementById('status-display').innerText = 'PRÓXIMA RONDA';
             document.getElementById('cashout-msg').classList.remove('show');
             
@@ -654,7 +626,7 @@
             const countdownInterval = setInterval(() => {
                 timeLeft -= 1000;
                 if (timeLeft > 0) {
-                    document.getElementById('multiplier-display').innerText = `${timeLeft/1000}s`;
+                    display.innerText = `${(timeLeft/1000).toFixed(1)}s`;
                     playTick();
                 } else {
                     clearInterval(countdownInterval);
@@ -662,43 +634,42 @@
                 }
             }, 1000);
 
-            // Bucle de renderizado constante
             if(!animationFrameId) gameLoop();
         }
 
         function startFlight() {
             gameState = 'FLYING';
-            // 1. Determina el resultado ANTES de la animación. 
-            // Cero manipulación: el resultado es ciego al saldo o apuestas.
+            // EL RESULTADO SE GENERA ANTES DE ANIMAR
             crashPoint = generateCrashPoint(); 
             
-            startTime = Date.now();
-            document.getElementById('status-display').innerText = '';
+            flightStartTime = Date.now();
+            lastFrameTime = flightStartTime;
+            currentElapsedMs = 0;
             
+            document.getElementById('status-display').innerText = '';
             updateActionButton();
         }
 
         function triggerCrash() {
             gameState = 'CRASHED';
-            currentMultiplier = crashPoint; // Forzar exactitud visual
+            // Forzar exactitud al final
+            currentVisualMultiplier = crashPoint; 
             
-            document.getElementById('multiplier-display').innerText = `${currentMultiplier.toFixed(2)}x`;
-            document.getElementById('multiplier-display').className = 'mult-crashed';
+            const display = document.getElementById('multiplier-display');
+            display.innerText = `${currentVisualMultiplier.toFixed(2)}x`;
+            display.className = 'mult-crashed';
+            
             document.getElementById('status-display').innerText = 'CRASHED';
             document.getElementById('status-display').style.color = 'var(--brand-red)';
             
             updateActionButton();
             playCrash();
             if(navigator.vibrate) navigator.vibrate(300);
-
-            // Si el jugador no cobró, pierde la apuesta. No hay que hacer nada en DB porque ya se restó al inicio.
             
-            // Actualizar Historial
             historyArr.push(crashPoint);
             if(historyArr.length > 10) historyArr.shift();
             renderHistory();
 
-            // Siguiente ronda
             setTimeout(() => {
                 document.getElementById('status-display').style.color = 'var(--brand-gold)';
                 initRound();
@@ -707,20 +678,25 @@
 
         function gameLoop() {
             if (gameState === 'FLYING') {
-                const elapsedMs = Date.now() - startTime;
+                const now = Date.now();
+                const delta = now - lastFrameTime;
+                lastFrameTime = now;
+                currentElapsedMs += delta;
                 
-                // Fórmula de crecimiento exponencial: M(t) = e^(k*t)
-                currentMultiplier = Math.max(1.00, Math.pow(Math.E, CONFIG.GROWTH_SPEED * (elapsedMs / 1000)));
+                // M(t) = e^(k*t^2) - 1. Esta fórmula arranca en 0 y sube lentamente hasta 1.00x, para luego despegar fuerte
+                currentVisualMultiplier = Math.pow(Math.E, CONFIG.ANIMATION_ACCELERATION * currentElapsedMs * currentElapsedMs / 1000) - 1;
 
-                if (currentMultiplier >= crashPoint) {
+                if (currentVisualMultiplier >= crashPoint) {
                     triggerCrash();
                 } else {
-                    document.getElementById('multiplier-display').innerText = `${currentMultiplier.toFixed(2)}x`;
-                    if (hasBet && !hasCashedOut) updateActionButton(); // Actualizar premio en vivo en el botón
+                    document.getElementById('multiplier-display').innerText = `${Math.max(1.00, currentVisualMultiplier).toFixed(2)}x`;
+                    
+                    // Actualizar el premio del botón en vivo solo si ya ha cruzado la línea de 1.00x
+                    if (hasBet && !hasCashedOut) updateActionButton(); 
                 }
             }
             
-            drawGraph(); // Pinta el Canvas (curva, nave, grid)
+            drawGraph(); 
             
             animationFrameId = requestAnimationFrame(gameLoop);
         }
